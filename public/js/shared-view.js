@@ -52,3 +52,25 @@ function collapseAll() {
     }
   }
 }
+
+async function copyShareLinkForImage(img) {
+  const id = img?.id;
+  if (!id) {
+    console.warn('No image id; cannot build share URL', img);
+    return;
+  }
+  const shareUrl = `${location.origin}/api/share/images/${id}`;
+
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(shareUrl);
+      console.log('[share] copied:', shareUrl);
+    } else {
+      // fallback
+      prompt('Copy share link:', shareUrl);
+    }
+  } catch (e) {
+    console.warn('[share] clipboard failed:', e);
+    prompt('Copy share link:', shareUrl);
+  }
+}

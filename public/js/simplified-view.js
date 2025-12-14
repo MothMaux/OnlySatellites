@@ -26,17 +26,45 @@ function createImageCard(img, pass) {
   const tPath = getThumbnailPath(img.path);
 
   wrapper.innerHTML = `
+  <div class="img-wrap" style="position:relative;">
     <a href="${imagePath}" target="_blank">
       <img loading="lazy" src="${tPath}" alt="Image">
     </a>
-    <div class="meta" onclick="openLightbox('${imagePath}')">
-      <div><strong>Date:</strong> ${pass.timestamp ? new Date(pass.timestamp * 1000).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : 'Unknown'}</div>
-      <div><strong>Satellite:</strong> ${pass.satellite}</div>
-      <div><strong>Sensor:</strong> ${img.sensor}</div>
-      <div><strong>Composite:</strong> ${img.composite}</div>
-      <div><strong>Height:</strong> ${img.vPixels}px</div>
-    </div>
-  `;
+
+    <button
+      type="button"
+      class="share-btn"
+      title="Copy share link"
+      style="
+        position:absolute; top:8px; right:8px;
+        z-index:2;
+        border:0;
+        border-radius:999px;
+        padding:6px 10px;
+        cursor:pointer;
+        background:rgba(0,0,0,.55);
+        color:#fff;
+        backdrop-filter: blur(4px);
+      "
+    >🔗</button>
+  </div>
+
+  <div class="meta" onclick="openLightbox('${imagePath}')">
+    <div><strong>Date:</strong> ${pass.timestamp ? new Date(pass.timestamp * 1000).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : 'Unknown'}</div>
+    <div><strong>Satellite:</strong> ${pass.satellite}</div>
+    <div><strong>Sensor:</strong> ${img.sensor}</div>
+    <div><strong>Composite:</strong> ${img.composite}</div>
+    <div><strong>Height:</strong> ${img.vPixels}px</div>
+  </div>
+`;
+
+const btn = wrapper.querySelector('.share-btn');
+btn?.addEventListener('click', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  copyShareLinkForImage(img);
+});
+
   wrapper.classList.add('collapsed');
   return wrapper;
 }

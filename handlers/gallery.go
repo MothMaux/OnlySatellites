@@ -66,6 +66,7 @@ func GalleryHandler(htmlFS fs.FS, api *GalleryAPI) (http.HandlerFunc, *template.
 	}
 	return h, tpl, nil
 }
+
 func (api *GalleryAPI) preloadSimplifiedJSON() (string, error) {
 	limit := 15
 	if api.LocalStore != nil {

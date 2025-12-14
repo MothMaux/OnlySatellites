@@ -211,6 +211,7 @@ func (app *Application) setupGalleryRoutes(r *mux.Router) {
 
 	// API endpoints
 	r.HandleFunc("/api/images", apiHandler.GetImages).Methods("GET")
+	r.HandleFunc("/api/share/images/{id:[0-9]+}", apiHandler.ShareImageByID).Methods("GET")
 	r.HandleFunc("/api/satellites", gapi.Satellites()).Methods("GET")
 	r.HandleFunc("/api/bands", gapi.Bands()).Methods("GET")
 	r.HandleFunc("/api/composites", gapi.CompositesList()).Methods("GET")

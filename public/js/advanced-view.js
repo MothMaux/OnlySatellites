@@ -21,8 +21,6 @@ document.getElementById('sortByPass')?.addEventListener('change', () => {
   updateCountLimit();
   loadImages();
 });
-//document.getElementById('satelliteFilter')?.addEventListener('change', updateCompositeOptions);
-//document.getElementById('satelliteFilter')?.addEventListener('change', loadImages);
 document.getElementById('bandFilter')?.addEventListener('change', loadImages);
 document.getElementById('correctedOnly')?.addEventListener('change', loadImages);
 document.getElementById('showUnfilled')?.addEventListener('change', loadImages);
@@ -455,16 +453,40 @@ function createImageCard(img) {
     : 'Unknown';
 
   wrapper.innerHTML = `
+  <div class="img-wrap" style="position:relative;">
     <a href="${imagePath}" target="_blank">
       <img loading="lazy" src="${tPath}" alt="Image">
     </a>
-    <div class="meta" onclick="openLightbox('${imagePath}')">
-      <div><strong>Date:</strong> ${dateStr}</div>
-      <div><strong>Satellite:</strong> ${img.satellite ?? ''}</div>
-      <div><strong>Composite:</strong> ${img.composite ?? ''}</div>
-      <div><strong>Height:</strong> ${img.vPixels ?? ''}px</div>
-    </div>
-  `;
+    <button
+      type="button"
+      class="share-btn"
+      title="Copy share link"
+      style="
+        position:absolute; top:8px; right:8px;
+        z-index:2;
+        border:0;
+        border-radius:999px;
+        padding:6px 10px;
+        cursor:pointer;
+        background:rgba(0,0,0,.55);
+        color:#fff;
+        backdrop-filter: blur(4px);
+      "
+    >🔗</button>
+  </div>
+  <div class="meta" onclick="openLightbox('${imagePath}')">
+    <div><strong>Date:</strong> ${dateStr}</div>
+    <div><strong>Satellite:</strong> ${img.satellite ?? ''}</div>
+    <div><strong>Composite:</strong> ${img.composite ?? ''}</div>
+    <div><strong>Height:</strong> ${img.vPixels ?? ''}px</div>
+  </div>
+`;
+const btn = wrapper.querySelector('.share-btn');
+btn?.addEventListener('click', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  copyShareLinkForImage(img);
+});
   wrapper.classList.add('collapsed');
   return wrapper;
 }

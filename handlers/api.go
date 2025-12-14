@@ -1,11 +1,15 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"html"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"OnlySats/com/shared"
 )
@@ -431,4 +435,105 @@ func (h *APIHandler) queryByPasses(whereSQL string, args []any, f QueryFilters) 
 		return nil, 0, err
 	}
 	return out, len(out), nil
+}
+
+type ShareImageMeta struct {
+	ID        int
+	Path      string
+	Satellite string
+	Timestamp int64
+	Composite string
+	Sensor    string
+}
+
+func (h *APIHandler) queryShareMetaByID(id int) (*ShareImageMeta, error) {
+	const q = `
+SELECT
+  images.id,
+  REPLACE(images.path, '\', '/') AS path_norm,
+  COALESCE(passes.satellite,'Unknown') AS satellite,
+  passes.timestamp,
+  images.composite,
+  images.sensor
+FROM images
+JOIN passes ON images.passId = passes.id
+WHERE images.id = ?
+LIMIT 1;
+`
+	var m ShareImageMeta
+	if err := h.DB.QueryRow(q, id).Scan(&m.ID, &m.Path, &m.Satellite, &m.Timestamp, &m.Composite, &m.Sensor); err != nil {
+		return nil, err
+	}
+	return &m, nil
+}
+
+func (h *APIHandler) ShareImageByID(w http.ResponseWriter, r *http.Request) {
+	rel := strings.TrimPrefix(r.URL.Path, "/api/share/images/")
+	rel = strings.TrimPrefix(rel, "/")
+	if rel == "" {
+		http.NotFound(w, r)
+		return
+	}
+
+	id, err := strconv.Atoi(rel)
+	if err != nil || id <= 0 {
+		http.NotFound(w, r)
+		return
+	}
+
+	meta, err := h.queryShareMetaByID(id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			http.NotFound(w, r)
+			return
+		}
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	scheme := "http"
+	if r.TLS != nil {
+		scheme = "https"
+	}
+	if xf := r.Header.Get("X-Forwarded-Proto"); xf == "https" || xf == "http" {
+		scheme = xf
+	}
+	host := r.Host
+	if xh := r.Header.Get("X-Forwarded-Host"); xh != "" {
+		host = xh
+	}
+
+	// html content
+	shareURL := fmt.Sprintf("%s://%s%s", scheme, host, r.URL.Path)
+
+	imageURL := fmt.Sprintf("%s://%s/images/%s", scheme, host, meta.Path)
+
+	title := meta.Satellite
+	tsUTC := time.Unix(meta.Timestamp, 0).UTC().Format("2006-01-02 15:04:05 UTC")
+	desc := fmt.Sprintf("%s • %s \n%s", meta.Composite, meta.Sensor, tsUTC)
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+
+	fmt.Fprint(w, "<!doctype html><html><head>")
+	fmt.Fprint(w, `<meta charset="utf-8">`)
+	fmt.Fprintf(w, `<title>%s</title>`, html.EscapeString(title))
+
+	fmt.Fprint(w, `<meta property="og:type" content="website">`)
+	fmt.Fprintf(w, `<meta property="og:title" content="%s">`, html.EscapeString(title))
+	fmt.Fprintf(w, `<meta property="og:description" content="%s">`, html.EscapeString(desc))
+	fmt.Fprintf(w, `<meta property="og:url" content="%s">`, html.EscapeString(shareURL))
+	fmt.Fprintf(w, `<meta property="og:image" content="%s">`, html.EscapeString(imageURL))
+
+	fmt.Fprint(w, `<meta name="twitter:card" content="summary_large_image">`)
+	fmt.Fprintf(w, `<meta name="twitter:title" content="%s">`, html.EscapeString(title))
+	fmt.Fprintf(w, `<meta name="twitter:description" content="%s">`, html.EscapeString(desc))
+	fmt.Fprintf(w, `<meta name="twitter:image" content="%s">`, html.EscapeString(imageURL))
+
+	fmt.Fprint(w, `</head><body style="margin:0;font-family:system-ui,sans-serif;">`)
+	fmt.Fprint(w, `<div style="padding:12px 16px;">`)
+	fmt.Fprintf(w, `<h1 style="margin:0 0 6px 0;font-size:18px;">%s</h1>`, html.EscapeString(title))
+	fmt.Fprintf(w, `<div style="opacity:.75;font-size:13px;margin-bottom:10px;">%s</div>`, html.EscapeString(desc))
+	fmt.Fprintf(w, `<img src="%s" alt="%s" style="max-width:100%%;height:auto;display:block;">`, html.EscapeString(imageURL), html.EscapeString(title))
+	fmt.Fprint(w, `</div></body></html>`)
 }
