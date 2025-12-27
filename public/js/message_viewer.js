@@ -1,27 +1,24 @@
 window.MessageViewer = (function(){
-  const FEED_ENDPOINT = id => `/api/messages/${id}`;
+  const FEED_ENDPOINT = id => `../../api/messages/${id}`;
 
-  // Minimal markdown -> HTML (same as in home_messages.js)
   const esc = (s) => (s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
   function mdToHtml(md) {
     let s = esc(md || '');
     s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
     s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-    s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, url) => {
-      const u = String(url).trim();
-      if (!/^https?:\/\//i.test(u)) return `${text} (${u})`;
-      return `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(text)}</a>`;
+    s = s.replace(/\[([^\]]*)\]\(([^)]+)\)/g, (_, text, url) => {
+      const u = String(url || '').trim();
+      const label = String(text || '').trim();
+
+      if (!/^https?:\/\//i.test(u)) {
+        return label ? `${label} (${esc(u)})` : esc(u);
+      }
+      const shown = label ? esc(label) : esc(u);
+      return `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${shown}</a>`;
     });
-    const lines = s.split(/\r?\n/);
-    const out = []; let list = null; const end = ()=>{ if(list){ out.push('<ul>'+list.join('')+'</ul>'); list=null; } };
-    for(const line of lines){
-      const m = /^\s*[-*]\s+(.*)$/.exec(line);
-      if(m){ (list||(list=[])).push('<li>'+m[1]+'</li>'); }
-      else { end(); out.push(line); }
-    }
-    end();
-    return out.join('\n').replace(/\n/g,'<br>');
+
+    return s.replace(/\r?\n/g, '<br>');
   }
 
   const fmtTime = (ts) => {
@@ -48,7 +45,6 @@ window.MessageViewer = (function(){
     const el = document.createElement('article');
     el.className = `msg ${cls} ${hasImg ? '' : 'no-image'}`;
     el.style.maxWidth = '1100px';
-    el.style.height = 'auto'; 
 
     el.innerHTML = `
       <div class="msg__media">${hasImg ? `<img class="msg__img" src="${m.imageUrl}" alt="">` : ``}</div>
@@ -56,13 +52,12 @@ window.MessageViewer = (function(){
         <span class="msg__time">${fmtTime(m.timestamp)}</span>
         <span class="msg__titletext">${esc(m.title)}</span>
       </div>
-      <div class="msg__bodylink" style="pointer-events:none;">
+      <div class="msg__bodylink">
         <div class="msg__body" style="display:block; -webkit-line-clamp:initial; white-space:normal;">${mdToHtml(m.message)}</div>
       </div>`;
     return el;
   }
 
-  // --- Modal ---
   function ensureModalShell(){
     let shell = document.querySelector('#messageModal');
     if (shell) return shell;
@@ -100,7 +95,6 @@ window.MessageViewer = (function(){
     }
   }
 
-  // Attach click delegation: intercept <a href="/messages/:id">
   function attachModalTriggers(containerSel='body'){
     const root = document.querySelector(containerSel) || document.body;
     root.addEventListener('click', (e)=>{
@@ -113,7 +107,6 @@ window.MessageViewer = (function(){
     });
   }
 
-  // Render fully into a container (standalone page)
   async function renderStandalone(mountSel, id){
     const mount = document.querySelector(mountSel);
     if (!mount) return;

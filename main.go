@@ -174,6 +174,7 @@ func (app *Application) createRouter() *mux.Router {
 func (app *Application) setupStaticRoutes(r *mux.Router) {
 	r.PathPrefix("/css/").Handler(http.StripPrefix("/css/", http.FileServer(app.mustSubFS("public/css"))))
 	r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", http.FileServer(app.mustSubFS("public/js"))))
+	r.PathPrefix("/img/").Handler(http.StripPrefix("/img/", http.FileServer(app.mustSubFS("public/image"))))
 }
 
 func (app *Application) setupPublicRoutes(r *mux.Router) {

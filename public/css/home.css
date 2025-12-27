@@ -20,8 +20,9 @@ h2 { margin:0 }
 .navbar a { align-content:center; color:var(--text); float:left; font-size:17px; height:34px;
   overflow:hidden; padding:0; text-align:center; text-decoration:none; width:20% }
 .navbar a.active { background-color:var(--bg-dark); color:var(--text-muted) }
-@media screen and (max-width: 500px) { 
-  .navbar a { display:block; float:none; text-align:left; width:100% }}
+@media screen and (max-width: 525px) { 
+  .navbar a { display:block; float:none; text-align:left; width:100% }
+  .msg__title { padding: 14px 16px 0 14px;}}
 #container { display:flex; gap:2rem; padding:1rem }
 #admin-center-stats { color:var(--text) }
 #text-panel { background:var(--highlight); border:1px solid var(--border-muted); border-radius:.5rem; color:var(--text);
@@ -84,3 +85,4 @@ h2 { margin:0 }
 .messages__loadall { padding: 10px 16px; border-radius: 10px; cursor: pointer; border: 2px solid var(--border); background: var(--bg-light); color: var(--primary);}
 .msg.no-image { grid-template-columns: 0 1fr; }
 .msg.no-image .msg__media { display: none; }
+a:link, a:visited, a:hover, a:active {color: var(--primary);}
