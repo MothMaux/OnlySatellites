@@ -57,7 +57,6 @@ type QueryFilters struct {
 	EndDate   string
 	StartTime string
 	EndTime   string
-	UseUTC    bool
 
 	CompositeKeys []string
 
@@ -136,7 +135,6 @@ func (h *APIHandler) parseQueryFilters(r *http.Request) QueryFilters {
 		EndDate:       q.Get("endDate"),
 		StartTime:     q.Get("startTime"),
 		EndTime:       q.Get("endTime"),
-		UseUTC:        q.Get("useUTC") != "0",
 
 		Page:      1,
 		Limit:     50,
@@ -239,25 +237,38 @@ func (h *APIHandler) buildWhere(f QueryFilters) (string, []any) {
 
 	// date range
 	if f.StartDate != "" {
-		start := h.parseDateTime(f.StartDate, "00:00", f.UseUTC)
+		start := h.parseDateTime(f.StartDate, "00:00")
 		conditions = append(conditions, "passes.timestamp >= ?")
 		args = append(args, start)
 	}
 	if f.EndDate != "" {
-		end := h.parseDateTime(f.EndDate, "23:59", f.UseUTC)
+		end := h.parseDateTime(f.EndDate, "23:59")
 		conditions = append(conditions, "passes.timestamp <= ?")
 		args = append(args, end)
 	}
 
 	// time-of-day window (seconds modulo 86400)
-	if f.StartTime != "" {
-		startSeconds := h.parseTimeString(f.StartTime, f.UseUTC)
-		conditions = append(conditions, "(passes.timestamp % 86400) >= ?")
+	todExpr := "(passes.timestamp % 86400)"
+
+	if f.StartTime != "" && f.EndTime != "" {
+		startSeconds := h.parseTimeString(f.StartTime)
+		endSeconds := h.parseTimeString(f.EndTime)
+
+		if startSeconds <= endSeconds {
+			conditions = append(conditions, todExpr+" >= ? AND "+todExpr+" <= ?")
+			args = append(args, startSeconds, endSeconds)
+		} else {
+			// Wrap midnight
+			conditions = append(conditions, "("+todExpr+" >= ? OR "+todExpr+" <= ?)")
+			args = append(args, startSeconds, endSeconds)
+		}
+	} else if f.StartTime != "" {
+		startSeconds := h.parseTimeString(f.StartTime)
+		conditions = append(conditions, todExpr+" >= ?")
 		args = append(args, startSeconds)
-	}
-	if f.EndTime != "" {
-		endSeconds := h.parseTimeString(f.EndTime, f.UseUTC)
-		conditions = append(conditions, "(passes.timestamp % 86400) <= ?")
+	} else if f.EndTime != "" {
+		endSeconds := h.parseTimeString(f.EndTime)
+		conditions = append(conditions, todExpr+" <= ?")
 		args = append(args, endSeconds)
 	}
 
@@ -338,10 +349,28 @@ func (h *APIHandler) queryByImages(whereSQL string, args []any, f QueryFilters) 
 // Pass-limited: pick pass set from *filtered images*, then return only those filtered images.
 func (h *APIHandler) queryByPasses(whereSQL string, args []any, f QueryFilters) ([]GalleryImage, int, error) {
 	limit := clamp(f.Limit, 1, 200)
+	offset := 0
+	if f.Page > 1 {
+		offset = (f.Page - 1) * limit
+	}
 
 	// rewrite WHERE for CTE aliases i/p
 	whereForCTE := strings.ReplaceAll(whereSQL, "images.", "i.")
 	whereForCTE = strings.ReplaceAll(whereForCTE, "passes.", "p.")
+
+	countSQL := `
+    WITH filtered AS (
+        SELECT i.passId
+        FROM images i
+        JOIN passes p ON i.passId = p.id
+        ` + " " + whereForCTE + `
+    )
+    SELECT COUNT(*) FROM (SELECT DISTINCT passId FROM filtered);
+`
+	var total int
+	if err := h.DB.QueryRow(countSQL, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
 
 	var sql string
 	if f.SortBy == "vPixels" {
@@ -367,7 +396,7 @@ func (h *APIHandler) queryByPasses(whereSQL string, args []any, f QueryFilters) 
 				FROM pass_metrics pm
 				JOIN passes p ON p.id = pm.passId
 				ORDER BY pm.maxVPixels ` + f.SortOrder + `, p.timestamp DESC
-				LIMIT ?
+				LIMIT ? OFFSET ?
 			)
 			SELECT
 				f.id, f.path, f.composite, f.sensor,
@@ -396,7 +425,7 @@ func (h *APIHandler) queryByPasses(whereSQL string, args []any, f QueryFilters) 
 				FROM filtered
 				GROUP BY passId
 				ORDER BY max_ts ` + f.SortOrder + `
-				LIMIT ?
+				LIMIT ? OFFSET ?
 			)
 			SELECT
 				f.id, f.path, f.composite, f.sensor,
@@ -409,7 +438,7 @@ func (h *APIHandler) queryByPasses(whereSQL string, args []any, f QueryFilters) 
 		`
 	}
 
-	argsFinal := append(append([]any{}, args...), limit)
+	argsFinal := append(append([]any{}, args...), limit, offset)
 
 	rows, err := h.DB.Query(sql, argsFinal...)
 	if err != nil {
@@ -434,7 +463,7 @@ func (h *APIHandler) queryByPasses(whereSQL string, args []any, f QueryFilters) 
 	if err := rows.Err(); err != nil {
 		return nil, 0, err
 	}
-	return out, len(out), nil
+	return out, total, nil
 }
 
 type ShareImageMeta struct {

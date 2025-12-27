@@ -5,3 +5,5 @@ frp_bin/
 tools/
 *.toml
 *.exe
+*.log
+*.exe

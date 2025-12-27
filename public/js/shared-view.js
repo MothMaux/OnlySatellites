@@ -1,4 +1,22 @@
-// shared.js
+//cache busting
+const PAGE_CACHE_TOKEN = (() => {
+  try {
+    return Math.random().toString(36).slice(2, 8);
+  } catch {
+    return String(Date.now());
+  }
+})();
+
+function attachThumbnail404Bypass(imgEl, originalSrc) {
+  if (!imgEl || !originalSrc) return;
+  imgEl.addEventListener('error', () => {
+    if (imgEl.dataset.cbTried === '1') return;
+    imgEl.dataset.cbTried = '1';
+    const sep = originalSrc.includes('?') ? '&' : '?';
+    imgEl.src = `${originalSrc}${sep}cb=${encodeURIComponent(PAGE_CACHE_TOKEN)}&t=${Date.now()}`;
+  });
+}
+
 function formatTimestamp(ts) {
   if (!ts) return 'Unknown';
   const date = new Date(ts * 1000);

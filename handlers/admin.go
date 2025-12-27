@@ -5,11 +5,15 @@ import (
 	"OnlySats/com/shared"
 	"encoding/json"
 	"io/fs"
+	"log"
 	"net/http"
+	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/h2non/bimg"
 )
 
 func ServeDiskStats(liveOutput string) http.HandlerFunc {
@@ -251,4 +255,172 @@ func (h *UsersHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 	// Return the password once so the admin can deliver it out-of-band.
 	writeJSON(w, http.StatusOK, resetPasswordResp{NewPassword: pw})
+}
+
+// Pass image rotating
+
+type rotatePassReq struct {
+	Path string `json:"path"`
+}
+
+type rotatePassResp struct {
+	OK      bool   `json:"ok"`
+	Started bool   `json:"started"`
+	Error   string `json:"error,omitempty"`
+	JobID   string `json:"jobId,omitempty"`
+}
+
+func ServeRotatePass180(liveOutputDir, thumbnailDir string) http.HandlerFunc {
+	liveBaseAbs := mustAbs(liveOutputDir)
+	thumbBaseAbs := strings.TrimSpace(thumbnailDir)
+	if thumbBaseAbs != "" {
+		thumbBaseAbs = mustAbs(thumbBaseAbs)
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req rotatePassReq
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeJSON(w, http.StatusBadRequest, rotatePassResp{OK: false, Error: "invalid json body"})
+			return
+		}
+		rel := strings.TrimSpace(req.Path)
+		if rel == "" {
+			writeJSON(w, http.StatusBadRequest, rotatePassResp{OK: false, Error: "path is required"})
+			return
+		}
+
+		liveTarget, err := safeJoin(liveBaseAbs, rel)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, rotatePassResp{OK: false, Error: "invalid path"})
+			return
+		}
+		if st, err := os.Stat(liveTarget); err != nil || !st.IsDir() {
+			writeJSON(w, http.StatusNotFound, rotatePassResp{OK: false, Error: "live path not found or not a directory"})
+			return
+		}
+
+		var thumbsTarget string
+		thumbsEnabled := strings.TrimSpace(thumbnailDir) != ""
+		if thumbsEnabled {
+			thumbsTarget = filepath.Clean(filepath.Join(thumbBaseAbs, rel))
+			if sameOrOverlappingDirs(liveTarget, thumbsTarget) {
+				thumbsEnabled = false
+				thumbsTarget = ""
+			}
+		}
+
+		jobID := time.Now().UTC().Format("20060102T150405.000Z0700")
+
+		go func() {
+			// rotate live_output
+			liveN, liveErrs := rotateDir180InPlace(liveTarget)
+			if len(liveErrs) > 0 {
+				log.Printf("[rotate-pass-180] job=%s live DONE with errors: rotated=%d errors=%d first=%v",
+					jobID, liveN, len(liveErrs), liveErrs[0])
+			} else {
+				log.Printf("[rotate-pass-180] job=%s live DONE: rotated=%d", jobID, liveN)
+			}
+
+			// rotate thumbnails if separate
+			if thumbsEnabled {
+				if st, err := os.Stat(thumbsTarget); err == nil && st.IsDir() {
+					thumbN, thumbErrs := rotateDir180InPlace(thumbsTarget)
+					if len(thumbErrs) > 0 {
+						log.Printf("[rotate-pass-180] job=%s thumbs DONE with errors: rotated=%d errors=%d first=%v",
+							jobID, thumbN, len(thumbErrs), thumbErrs[0])
+					} else {
+						log.Printf("[rotate-pass-180] job=%s thumbs DONE: rotated=%d", jobID, thumbN)
+					}
+				} else {
+					log.Printf("[rotate-pass-180] job=%s thumbs SKIP: not found or not dir: %s", jobID, thumbsTarget)
+				}
+			}
+		}()
+
+		writeJSON(w, http.StatusAccepted, rotatePassResp{
+			OK:      true,
+			Started: true,
+			JobID:   jobID,
+		})
+	}
+}
+
+func rotateDir180InPlace(root string) (rotated int, errs []error) {
+	_ = filepath.WalkDir(root, func(p string, d os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			errs = append(errs, walkErr)
+			return nil
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if !isRotatableImagePath(p) {
+			return nil
+		}
+
+		buf, err := os.ReadFile(p)
+		if err != nil {
+			errs = append(errs, err)
+			return nil
+		}
+
+		out, err := bimg.NewImage(buf).Rotate(180)
+		if err != nil {
+			errs = append(errs, err)
+			return nil
+		}
+
+		// overwrite
+		if err := os.WriteFile(p, out, 0644); err != nil {
+			errs = append(errs, err)
+			return nil
+		}
+
+		rotated++
+		return nil
+	})
+	return rotated, errs
+}
+
+func isRotatableImagePath(p string) bool {
+	ext := strings.ToLower(filepath.Ext(p))
+	switch ext {
+	case ".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff":
+		return true
+	default:
+		return false
+	}
+}
+
+func mustAbs(p string) string {
+	abs, err := filepath.Abs(p)
+	if err != nil {
+		log.Printf("[rotate-pass-180] warning: Abs(%q) failed: %v", p, err)
+		return p
+	}
+	return abs
+}
+
+func isWithinBase(baseAbs, targetAbs string) bool {
+	base := filepath.Clean(baseAbs)
+	t := filepath.Clean(targetAbs)
+
+	if base == t {
+		return true
+	}
+	rel, err := filepath.Rel(base, t)
+	if err != nil {
+		return false
+	}
+	return rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+// same directory or one is inside the other
+func sameOrOverlappingDirs(a, b string) bool {
+	a = filepath.Clean(a)
+	b = filepath.Clean(b)
+	if a == b {
+		return true
+	}
+	return isWithinBase(a, b) || isWithinBase(b, a)
 }

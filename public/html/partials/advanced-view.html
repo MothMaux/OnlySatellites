@@ -68,7 +68,7 @@
   </select>
 
   <div class="dropdown" id="datetimeDropdown">
-    <button onclick="toggleDropdown(event, 'datetimeDropdown')">Filter Date/Time</button>
+    <button onclick="toggleDropdown(event, 'datetimeDropdown')">Filter Date/Time (UTC)</button>
     <div class="dropdown-content checkbox-group" id="datetimeDropdown-content" style="min-width: 260px;">
       <div style="margin: 10px;">
         <strong>Date Restriction</strong><br>
@@ -94,6 +94,9 @@
 </div>
 
 <div class="gallery" id="gallery">Loading Gallery...</div>
+<div style="text-align:center; margin: 16px 0;">
+  <button id="loadMoreBtn" style="color:var(--text-muted);background-color:var(--bg-dark);border:2px,solid,var(--active);padding:.7rem 20%;">Load more</button>
+</div>
 
 <div id="lightbox" class="lightbox" onclick="closeLightbox()">
   <img id="lightbox-img" src="" alt="Large view">

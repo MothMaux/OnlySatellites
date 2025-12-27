@@ -80,3 +80,7 @@ h2 { margin:0 }
 .msg__body.fallback-ellipsis { white-space: nowrap; text-overflow: ellipsis; }
 .msg.no-image { grid-template-columns: 1fr; }
 .msg.no-image .msg__media { display: none; }
+.messages-actions { display: flex; justify-content: center; padding: 16px 0 28px; }
+.messages__loadall { padding: 10px 16px; border-radius: 10px; cursor: pointer; border: 2px solid var(--border); background: var(--bg-light); color: var(--primary);}
+.msg.no-image { grid-template-columns: 0 1fr; }
+.msg.no-image .msg__media { display: none; }

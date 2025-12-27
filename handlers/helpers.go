@@ -22,7 +22,7 @@ type apiOK[T any] struct {
 	Data T    `json:"data"`
 }
 
-func (h *APIHandler) parseDateTime(dateStr, timeStr string, useUTC bool) int64 {
+func (h *APIHandler) parseDateTime(dateStr, timeStr string) int64 {
 	parts := strings.Split(dateStr, "-")
 	if len(parts) != 3 {
 		return 0
@@ -38,13 +38,10 @@ func (h *APIHandler) parseDateTime(dateStr, timeStr string, useUTC bool) int64 {
 	hour, _ := strconv.Atoi(tp[0])
 	minute, _ := strconv.Atoi(tp[1])
 
-	if useUTC {
-		return time.Date(year, time.Month(month), day, hour, minute, 0, 0, time.UTC).Unix()
-	}
-	return time.Date(year, time.Month(month), day, hour, minute, 0, 0, time.Local).Unix()
+	return time.Date(year, time.Month(month), day, hour, minute, 0, 0, time.UTC).Unix()
 }
 
-func (h *APIHandler) parseTimeString(timeStr string, useUTC bool) int {
+func (h *APIHandler) parseTimeString(timeStr string) int {
 	tp := strings.Split(timeStr, ":")
 	if len(tp) != 2 {
 		return 0
@@ -52,10 +49,6 @@ func (h *APIHandler) parseTimeString(timeStr string, useUTC bool) int {
 	hour, _ := strconv.Atoi(tp[0])
 	minute, _ := strconv.Atoi(tp[1])
 	seconds := hour*3600 + minute*60
-	if !useUTC {
-		_, offset := time.Now().Zone()
-		seconds = (seconds + offset + 86400) % 86400
-	}
 	return seconds
 }
 

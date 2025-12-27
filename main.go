@@ -489,6 +489,7 @@ func (app *Application) setupMiscRoutes(r *mux.Router) {
 	r.Handle("/local/stats", app.requireAuth(3, app.serveEmbeddedHTML("stats.html", htmlFS))).Methods("GET")
 	r.Handle("/local/admin", app.requireAuth(1, app.serveEmbeddedHTML("admin-center.html", htmlFS))).Methods("GET")
 	r.Handle("/local/api/disk-stats", app.requireAuth(3, http.HandlerFunc(handlers.ServeDiskStats(app.config.Paths.LiveOutputDir)))).Methods("GET")
+	r.Handle("/local/api/rotate-pass", app.requireAuth(3, http.HandlerFunc(handlers.ServeRotatePass180(app.config.Paths.LiveOutputDir, app.config.Paths.ThumbnailDir)))).Methods("POST")
 
 	// API endpoints
 	r.Handle("/api/stats", app.requireAuth(3, http.HandlerFunc(app.handleStats))).Methods("GET")

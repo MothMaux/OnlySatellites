@@ -1,13 +1,20 @@
 (async function () {
   const FEED_SEL = '#messagesFeed';
-  const FEED_URL = 'api/messages/latest';
-
+  const FEED_URL_LATEST = 'api/messages/latest';
+  const FEED_URL_ALL = 'api/messages';
   const el = document.querySelector(FEED_SEL);
   if (!el) return;
-
+  const btnAll = document.getElementById('loadAllMessagesBtn');
   const h = (s, ...v) => s.reduce((a, b, i) => a + b + (v[i] ?? ''), '');
+
   const esc = (s) =>
-    (s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    (s ?? '').replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[c]));
 
   const typeClass = (t) => (t === 'alert' ? 'type-alert' : t === 'warn' ? 'type-warn' : 'type-info');
   const messageHref = (id) => `messages/${id}`;
@@ -15,63 +22,44 @@
   const fmtTime = (ts) => {
     if (!ts) return '';
     const d = new Date(ts * 1000);
-    // Local time, short but explicit
     return d.toLocaleString(undefined, {
       year: 'numeric', month: 'short', day: '2-digit',
       hour: '2-digit', minute: '2-digit'
     });
   };
 
-  // --- Minimal, safe-ish Markdown -> HTML ---
-  // Features: **bold**, *italic*, `code`, [text](https://...), unordered lists (- or *)
-  // plus newline => <br> (outside lists). Everything starts escaped to prevent XSS.
   function mdToHtml(md) {
     let s = esc(md || '');
-
-    // Inline code first to avoid messing with inner markers
     s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-    // Bold (**text**) before italic
     s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-    // Italic (*text*)
     s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    s = s.replace(/\[([^\]]*)\]\(([^)]+)\)/g, (_, text, url) => {
+      const u = String(url || '').trim();
+      const label = String(text || '').trim();
 
-    // Links: [text](url) — restrict to http/https
-    s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, url) => {
-      const u = String(url).trim();
-      if (!/^https?:\/\//i.test(u)) return `${text} (${u})`; // don’t create javascript: links
-      const t = esc(text);
-      const uu = esc(u);
-      return `<a href="${uu}" target="_blank" rel="noopener noreferrer">${t}</a>`;
+      if (!/^https?:\/\//i.test(u)) {
+        return label ? `${label} (${esc(u)})` : esc(u);
+      }
+      const shown = label ? esc(label) : esc(u);
+      return `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${shown}</a>`;
     });
 
-    // Lists: group consecutive lines starting with - / *
-    const lines = s.split(/\r?\n/);
-    const out = [];
-    let list = null;
-    const endList = () => { if (list) { out.push('<ul>' + list.join('') + '</ul>'); list = null; } };
-
-    for (const line of lines) {
-      const m = /^\s*[-*]\s+(.*)$/.exec(line);
-      if (m) {
-        if (!list) list = [];
-        list.push('<li>' + m[1] + '</li>');
-      } else {
-        endList();
-        out.push(line);
-      }
-    }
-    endList();
-
-    // Remaining newlines => <br>
-    return out.join('\n').replace(/\n/g, '<br>');
+    return s.replace(/\r?\n/g, '<br>');
   }
 
-  async function fetchLatest() {
-    const res = await fetch(FEED_URL, { credentials: 'same-origin' });
+  async function fetchMessages(url) {
+    const res = await fetch(url, { credentials: 'same-origin' });
     if (!res.ok) throw new Error(await res.text());
     const j = await res.json();
     return (j && j.data && j.data.messages) || [];
+  }
+
+  async function fetchLatest() {
+    return fetchMessages(FEED_URL_LATEST);
+  }
+
+  async function fetchAll() {
+    return fetchMessages(FEED_URL_ALL);
   }
 
   function render(messages) {
@@ -83,29 +71,73 @@
       const title = esc(m.title);
       const bodyHTML = mdToHtml(m.message);
       const timeText = fmtTime(m.timestamp);
-
+      const href = messageHref(m.id);
       const node = document.createElement('article');
       node.className = `msg ${cls} ${hasImg ? '' : 'no-image'}`;
 
       node.innerHTML = h`
         <div class="msg__media">
-          ${hasImg ? `<img class="msg__img" src="${m.imageUrl}" alt="">` : ``}
+          ${hasImg ? `<img class="msg__img" src="${esc(m.imageUrl)}" alt="">` : ``}
         </div>
         <div class="msg__title">
           <span class="msg__titletext">${title}</span>
           <span class="msg__time">${timeText}</span>
         </div>
-        <a class="msg__bodylink" href="${messageHref(m.id)}" aria-label="Open message: ${title}">
+        <div class="msg__bodylink" data-href="${esc(href)}" aria-label="Open message: ${title}">
           <div class="msg__body">${bodyHTML}</div>
-        </a>
+        </div>
       `;
+      node.addEventListener('click', (e) => {
+        const a = e.target && e.target.closest ? e.target.closest('a') : null;
+        if (a) return;
+        window.location.href = href;
+      });
+
+      node.tabIndex = 0;
+      node.setAttribute('role', 'link');
+      node.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          window.location.href = href;
+        }
+      });
 
       el.appendChild(node);
     });
   }
 
+  async function loadLatest() {
+    const msgs = await fetchLatest();
+    render(msgs);
+
+    if (btnAll) btnAll.style.display = '';
+  }
+
+  async function loadAll() {
+    if (!btnAll) return;
+
+    btnAll.disabled = true;
+    const oldText = btnAll.textContent;
+    btnAll.textContent = 'Loading…';
+
+    try {
+      const msgs = await fetchAll();
+      render(msgs);
+      btnAll.style.display = 'none';
+    } catch (e) {
+      console.error(e);
+      btnAll.disabled = false;
+      btnAll.textContent = oldText || 'See All Messages';
+    }
+  }
+
+  if (btnAll) {
+    btnAll.addEventListener('click', loadAll);
+  }
+
   try {
-    render(await fetchLatest());
-  } catch {
+    await loadLatest();
+  } catch (e) {
+    console.error(e);
   }
 })();

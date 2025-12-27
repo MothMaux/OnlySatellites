@@ -57,7 +57,8 @@ function createImageCard(img, pass) {
     <div><strong>Height:</strong> ${img.vPixels}px</div>
   </div>
 `;
-
+const thumbImg = wrapper.querySelector('img');
+attachThumbnail404Bypass(thumbImg, tPath);
 const btn = wrapper.querySelector('.share-btn');
 btn?.addEventListener('click', (e) => {
   e.preventDefault();

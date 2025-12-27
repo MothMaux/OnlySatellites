@@ -1,6 +1,8 @@
 window.addEventListener('load', async () => {
   await fetchOptions();
-  await loadImages();
+  await probeRotatePermission();
+  currentPage = 1;
+  await loadImages({ append: false });
 
   try {
     const res = await fetch('api/update', { method: 'POST' });
@@ -19,19 +21,41 @@ window.addEventListener('load', async () => {
 
 document.getElementById('sortByPass')?.addEventListener('change', () => {
   updateCountLimit();
-  loadImages();
+  currentPage = 1;
+  loadImages({ append: false });
 });
-document.getElementById('bandFilter')?.addEventListener('change', loadImages);
-document.getElementById('correctedOnly')?.addEventListener('change', loadImages);
-document.getElementById('showUnfilled')?.addEventListener('change', loadImages);
-document.getElementById('mapsOnly')?.addEventListener('change', loadImages);
-document.getElementById('sortFilter')?.addEventListener('change', loadImages);
-document.getElementById('useUTC')?.addEventListener('change', loadImages);
-document.getElementById('collapseAll')?.addEventListener('change', collapseAll);
+document.getElementById('bandFilter')?.addEventListener('change', () => {currentPage = 1; loadImages({ append: false });});
+document.getElementById('correctedOnly')?.addEventListener('change', () => {currentPage = 1; loadImages({ append: false });});
+document.getElementById('showUnfilled')?.addEventListener('change', () => {currentPage = 1; loadImages({ append: false });});
+document.getElementById('mapsOnly')?.addEventListener('change', () => {currentPage = 1; loadImages({ append: false });});
+document.getElementById('sortFilter')?.addEventListener('change', () => {currentPage = 1; loadImages({ append: false });});
+document.getElementById('useUTC')?.addEventListener('change', () => {currentPage = 1; loadImages({ append: false });});
+document.getElementById('collapseAll')?.addEventListener('change', () => {currentPage = 1; loadImages({ append: false });});
+document.getElementById('showCountSelect')?.addEventListener('keypress', (e) => {if (e.key === 'Enter') currentPage = 1; loadImages({ append: false });});
+document.getElementById('loadMoreBtn')?.addEventListener('click', async () => {currentPage += 1; await loadImages({ append: true });
+const { limit } = getCountLimit(); const loadMoreBtn = document.getElementById('loadMoreBtn');
+if (loadMoreBtn) {loadMoreBtn.style.display = (Array.isArray(images) && images.length >= limit) ? 'inline-block' : 'none';}});
 
-document.getElementById('showCountSelect')?.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') loadImages();
-});
+let canRotatePass = false;
+let currentPage = 1;
+let lastQueryKey = '';
+
+async function probeRotatePermission() {
+  try {
+    const res = await fetch('/local/api/rotate-pass', { method: 'POST' });
+    if (res.status === 403) {
+      canRotatePass = false;
+      return;
+    }
+    if (res.status === 400) {
+      canRotatePass = true;
+      return;
+    }
+    canRotatePass = false;
+  } catch (_) {
+    canRotatePass = false;
+  }
+}
 
 function getCountLimit() {
   const groupByPass = document.getElementById('sortByPass')?.checked;
@@ -254,6 +278,7 @@ function getFilters() {
   if (endTime) params.append('endTime', endTime);
   params.append('sortBy', sortBy);
   params.append('sortOrder', sortOrder);
+  params.append('page', String(currentPage));
 
   const mapsOnly = document.getElementById('mapsOnly')?.checked;
   if (mapsOnly) params.append('mapsOnly', '1');
@@ -264,13 +289,10 @@ function getFilters() {
   const showUnfilled = document.getElementById('showUnfilled')?.checked;
   if (!showUnfilled) params.append('filledOnly', '1');
 
-  const utcTime = document.getElementById('useUTC')?.checked;
-  if (utcTime) params.append('useUTC', '0');
-
   return params;
 }
 
-async function loadImages() {
+async function loadImages({ append = false } = {}) {
   console.log('loadImages called');
   const groupByPass = document.getElementById('sortByPass')?.checked;
   const params = getFilters();
@@ -310,7 +332,7 @@ async function loadImages() {
 
   const gallery = document.getElementById('gallery');
   if (!gallery) return;
-  gallery.innerHTML = '';
+  if (!append) gallery.innerHTML = '';
   const fragment = document.createDocumentFragment();
 
   if (groupByPass) {
@@ -356,6 +378,10 @@ async function loadImages() {
       const parts = String(item.rawDataPath || '').split('.');
       const dataExt = parts.length > 1 ? parts.pop() : '';
 
+      const rotateBtn = (canRotatePass && passName)
+        ? `<button type="button" class="rotate-btn" title="Rotate this pass 180°">↻</button>`
+        : '';
+
       const exportLink = (item.rawDataPath && item.rawDataPath !== 'NOT_CONFIGURED')
         ? `<a href="/api/export?path=${encodeURIComponent(passName + "/" + item.rawDataPath)}" download class="export-raw" title="Download raw data"><b>.${dataExt}</b></a>`
         : '';
@@ -368,6 +394,7 @@ async function loadImages() {
         <div class="pass-header">
           <div class="pass-title"><strong>${item.satellite || 'Unknown'} - ${formatTimestamp(item.timestamp)}</strong></div>
           <div class="pass-actions">
+            ${rotateBtn}
             ${zipLink}
             ${exportLink}
             <span class="arrow" onclick="togglePass('${passId}')">▼</span>
@@ -376,11 +403,17 @@ async function loadImages() {
         <div class="pass-images" id="${passId}"></div>
       `;
 
-      const passImagesContainer = wrapper.querySelector(`#${passId}`);
-if (Array.isArray(item.images) && passImagesContainer) {
+  const passImagesContainer = wrapper.querySelector(`#${passId}`);
+  if (Array.isArray(item.images) && passImagesContainer) {
   const sorting = document.getElementById('sortFilter')?.value;
   const bySensor = groupImagesBySensor(item.images);
   const sensorNames = Array.from(bySensor.keys()).sort((a, b) => a.localeCompare(b));
+  const btn = wrapper.querySelector('.rotate-btn');
+  btn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    rotatePass180(passName);
+  });
 
   sensorNames.forEach(sensorName => {
     const imagesForSensor = bySensor.get(sensorName) || [];
@@ -481,6 +514,8 @@ function createImageCard(img) {
     <div><strong>Height:</strong> ${img.vPixels ?? ''}px</div>
   </div>
 `;
+const thumbImg = wrapper.querySelector('img');
+attachThumbnail404Bypass(thumbImg, tPath);
 const btn = wrapper.querySelector('.share-btn');
 btn?.addEventListener('click', (e) => {
   e.preventDefault();
@@ -489,4 +524,28 @@ btn?.addEventListener('click', (e) => {
 });
   wrapper.classList.add('collapsed');
   return wrapper;
+}
+
+async function rotatePass180(passPath) {
+  if (!passPath) return;
+  try {
+    const res = await fetch('/local/api/rotate-pass', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: passPath })
+    });
+
+    if (res.status === 403) {
+      alert('Access denied');
+      return;
+    }
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      alert(`Rotate failed (${res.status})${txt ? `: ${txt}` : ''}`);
+      return;
+    }
+    alert('Rotation started.');
+  } catch (e) {
+    alert('Rotate failed (network error).');
+  }
 }
