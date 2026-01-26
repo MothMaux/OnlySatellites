@@ -6,4 +6,4 @@ tools/
 *.toml
 *.exe
 *.log
-*.exe
+*.toml

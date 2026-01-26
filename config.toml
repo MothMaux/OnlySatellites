@@ -12,7 +12,7 @@ cache_size = 10000
 
 [paths]
 data_dir = 'data'
-live_output_dir = 'live_output'
+live_output_dir = 'C:\\Users\\max\\OneDrive\\Desktop\\live_output'
 thumbnail_dir = ''
 log_dir = 'logs'
 

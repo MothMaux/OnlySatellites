@@ -35,7 +35,20 @@ type compEntry struct {
 type GalleryPageData struct {
 	Mode          string
 	Simplified    bool
-	InitialDataJS template.JS // preloaded JSON for simplified view
+	InitialDataJS template.JS
+	Limit         int
+}
+
+func getLimit(api *GalleryAPI) (li int) {
+	limit := 15
+	if api.LocalStore != nil {
+		if s, err := api.LocalStore.GetSetting(context.Background(), "pass_limit"); err == nil {
+			if v, err2 := strconv.Atoi(strings.TrimSpace(s)); err2 == nil && v > 0 {
+				limit = v
+			}
+		}
+	}
+	return limit
 }
 
 func GalleryHandler(htmlFS fs.FS, api *GalleryAPI) (http.HandlerFunc, *template.Template, error) {
@@ -44,6 +57,8 @@ func GalleryHandler(htmlFS fs.FS, api *GalleryAPI) (http.HandlerFunc, *template.
 	if err != nil {
 		return nil, nil, err
 	}
+
+	limit := getLimit(api)
 
 	h := func(w http.ResponseWriter, r *http.Request) {
 		mode := strings.ToLower(r.URL.Query().Get("mode"))
@@ -54,6 +69,7 @@ func GalleryHandler(htmlFS fs.FS, api *GalleryAPI) (http.HandlerFunc, *template.
 			Mode:          mode,
 			Simplified:    (mode == "simple"),
 			InitialDataJS: template.JS("[]"),
+			Limit:         limit,
 		}
 		if data.Simplified {
 			if js, err := api.preloadSimplifiedJSON(); err == nil {
@@ -68,14 +84,7 @@ func GalleryHandler(htmlFS fs.FS, api *GalleryAPI) (http.HandlerFunc, *template.
 }
 
 func (api *GalleryAPI) preloadSimplifiedJSON() (string, error) {
-	limit := 15
-	if api.LocalStore != nil {
-		if s, err := api.LocalStore.GetSetting(context.Background(), "pass_limit"); err == nil {
-			if v, err2 := strconv.Atoi(strings.TrimSpace(s)); err2 == nil && v > 0 {
-				limit = v
-			}
-		}
-	}
+	limit := getLimit(api)
 
 	const q = `
 WITH recent_passes AS (
