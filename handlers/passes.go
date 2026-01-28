@@ -236,7 +236,7 @@ func (h *TemplatesAdminAPI) DeleteImageDirRule(w http.ResponseWriter, r *http.Re
 
 func (h *TemplatesAdminAPI) ListComposites(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	rows, err := h.Prefs.ListComposites(ctx)
+	rows, err := h.Prefs.ListConfiguredComposites(ctx)
 	if err != nil {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
 		return

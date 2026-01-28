@@ -551,16 +551,38 @@ func (api *GalleryAPI) UserImages() http.HandlerFunc {
 // ---------- helpers ----------
 
 func (api *GalleryAPI) loadCompositeEntries(ctx context.Context) ([]compEntry, error) {
-	if api.LocalStore != nil {
-		if items, err := api.LocalStore.ListComposites(ctx); err == nil {
-			out := make([]compEntry, 0, len(items))
-			for _, c := range items {
-				out = append(out, compEntry{Key: c.Key, Label: c.Name, Enabled: c.Enabled})
-			}
-			return out, nil
+	if api.LocalStore == nil {
+		return nil, nil
+	}
+
+	cfg, _ := api.LocalStore.ListConfiguredComposites(ctx)
+	rules, _ := api.LocalStore.ListRuleComposites(ctx)
+
+	out := map[string]compEntry{}
+
+	for _, c := range cfg {
+		out[c.Key] = compEntry{
+			Key:     c.Key,
+			Label:   c.Name,
+			Enabled: c.Enabled,
 		}
 	}
-	return []compEntry{}, nil
+
+	for _, r := range rules {
+		e := out[r.Key]
+		e.Key = r.Key
+		if e.Label == "" {
+			e.Label = r.Name
+		}
+		e.Enabled = true
+		out[r.Key] = e
+	}
+
+	res := make([]compEntry, 0, len(out))
+	for _, v := range out {
+		res = append(res, v)
+	}
+	return res, nil
 }
 
 func (api *GalleryAPI) disabledLabelSet(ctx context.Context) map[string]struct{} {

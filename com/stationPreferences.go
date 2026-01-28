@@ -987,34 +987,12 @@ func (s *LocalDataStore) GetComposite(ctx context.Context, key string) (*Composi
 	return &c, nil
 }
 
-func (s *LocalDataStore) ListComposites(ctx context.Context) ([]Composite, error) {
+func (s *LocalDataStore) ListConfiguredComposites(
+	ctx context.Context,
+) ([]Composite, error) {
 	const q = `
-WITH all_composites AS (
-    SELECT
-        c.key   AS key,
-        c.label AS label,
-        CASE
-            WHEN EXISTS (
-                SELECT 1
-                FROM image_dir_rules r
-                WHERE r.composite = c.key
-            ) THEN 1
-            ELSE c.enabled
-        END AS enabled
-    FROM composites c
-
-    UNION
-
-    SELECT
-        r.composite AS key,
-        r.composite AS label, -- or use some other default label logic if you prefer
-        1 AS enabled
-    FROM image_dir_rules r
-    LEFT JOIN composites c ON c.key = r.composite
-    WHERE c.key IS NULL
-)
 SELECT key, label, enabled
-FROM all_composites
+FROM composites
 ORDER BY key;
 `
 	rows, err := s.db.QueryContext(ctx, q)
@@ -1031,6 +1009,36 @@ ORDER BY key;
 			return nil, err
 		}
 		c.Enabled = en != 0
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
+func (s *LocalDataStore) ListRuleComposites(
+	ctx context.Context,
+) ([]Composite, error) {
+	const q = `
+SELECT DISTINCT
+    composite AS key,
+    composite AS label,
+    1 AS enabled
+FROM image_dir_rules
+ORDER BY composite;
+`
+	rows, err := s.db.QueryContext(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []Composite
+	for rows.Next() {
+		var c Composite
+		var en int
+		if err := rows.Scan(&c.Key, &c.Name, &en); err != nil {
+			return nil, err
+		}
+		c.Enabled = true
 		out = append(out, c)
 	}
 	return out, rows.Err()
