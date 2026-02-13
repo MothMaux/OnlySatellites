@@ -1,29 +1,4 @@
 document.addEventListener('DOMContentLoaded', async () => {
-  const statsDiv = document.getElementById('admin-center-stats');
-  const VAR_OPTIONS = [
-    'bg','bg-dark','bg-light','border','border-muted',
-    'danger','highlight','info','primary','secondary',
-    'success','text','text-muted','warning'
-  ];
-const $ = (sel, root=document) => root.querySelector(sel);
-const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
-
-const ENCODINGS = ['hex', 'rgb', 'hsl', 'oklch'];
-
-const modal = document.getElementById('themeModal');
-const openBtn = document.getElementById('openThemeBtn');
-const closeBtn = document.getElementById('themeCloseBtn');
-const cancelBtn = document.getElementById('themeCancelBtn');
-const saveBtn = document.getElementById('themeSaveBtn');
-const addRowBtn = document.getElementById('addThemeRowBtn');
-const rows = document.getElementById('themeRows');
-const msg = document.getElementById('themeMsg');
-const cmodal = $('#composites-modal');
-const tbody = $('#composites-table tbody');
-const cmsg = $('#comp-msg');
-const btnOpen = $('#btn-open-composites');
-const btnAdd = $('#btn-add-composite');
-const btnSave = $('#btn-save-composites');
 const umodal      = document.getElementById('users-modal');
 const uOpenBtn    = document.getElementById('btn-open-users');
 const uTbody      = document.querySelector('#users-table tbody');
@@ -32,226 +7,10 @@ const uBtnAdd     = document.getElementById('btn-add-user');
 const uBtnSave    = document.getElementById('btn-save-users');
 const updateCdInput   = document.getElementById('update-cd');
 const passLimitInput  = document.getElementById('pass-limit');
-const satRateInput    = document.getElementById('satdump-rate');
-const satSpanInput    = document.getElementById('satdump-span');
 
-  function hexToRgb(hex) {
-    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    if (!m) return null;
-    return { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) };
-  }
-  function rgbToHsl(r, g, b) {
-    r/=255; g/=255; b/=255;
-    const max=Math.max(r,g,b), min=Math.min(r,g,b);
-    let h, s, l=(max+min)/2;
-    if(max===min){ h=s=0; }
-    else{
-      const d=max-min;
-      s=l>0.5? d/(2-max-min) : d/(max+min);
-      switch(max){
-        case r: h=(g-b)/d + (g<b?6:0); break;
-        case g: h=(b-r)/d + 2; break;
-        case b: h=(r-g)/d + 4; break;
-      }
-      h/=6;
-    }
-    return {h: Math.round(h*360), s: Math.round(s*100), l: Math.round(l*100)};
-  }
+const saveSettingsBtn    = document.getElementById('settings-save');
+const statusEl   = document.getElementById('settings-status');
 
-  const srgbToLinear = c => {
-    c /= 255;
-    return (c <= 0.04045) ? c/12.92 : Math.pow((c + 0.055)/1.055, 2.4);
-  };
-  function rgbToOKLCH(r8,g8,b8){
-    const r = srgbToLinear(r8), g = srgbToLinear(g8), b = srgbToLinear(b8);
-
-    const l = 0.4122214708*r + 0.5363325363*g + 0.0514459929*b;
-    const m = 0.2119034982*r + 0.6806995451*g + 0.1073969566*b;
-    const s = 0.0883024619*r + 0.2817188376*g + 0.6299787005*b;
-
-    const l_ = Math.cbrt(l), m_ = Math.cbrt(m), s_ = Math.cbrt(s);
-
-    const L = 0.2104542553*l_ + 0.7936177850*m_ - 0.0040720468*s_;
-    const a = 1.9779984951*l_ - 2.4285922050*m_ + 0.4505937099*s_;
-    const b2= 0.0259040371*l_ + 0.7827717662*m_ - 0.8086757660*s_;
-
-    const C = Math.sqrt(a*a + b2*b2);
-    let H = Math.atan2(b2, a) * 180/Math.PI;
-    if (H < 0) H += 360;
-    return { L, C, H };
-  }
-
-  function formatValue(enc, hex) {
-    const rgb = hexToRgb(hex);
-    if (!rgb) return '';
-    if (enc === 'hex') return hex.toLowerCase();
-    if (enc === 'rgb') return `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
-    if (enc === 'hsl') {
-      const {h,s,l} = rgbToHsl(rgb.r, rgb.g, rgb.b);
-      return `hsl(${h} ${s}% ${l}%)`;
-    }
-    if (enc === 'oklch') {
-      const {L,C,H} = rgbToOKLCH(rgb.r, rgb.g, rgb.b);
-      const l = (Math.round(L*1000)/1000).toFixed(3);
-      const c = (Math.round(C*1000)/1000).toFixed(3);
-      const h = Math.round(H);
-      return `oklch(${l} ${c} ${h})`;
-    }
-    return hex.toLowerCase();
-  }
-
-  function makeVarSelect(selected = '') {
-    const sel = document.createElement('select');
-    VAR_OPTIONS.forEach(v => {
-      const opt = document.createElement('option');
-      opt.value = v; opt.textContent = v;
-      if (v === selected) opt.selected = true;
-      sel.appendChild(opt);
-    });
-    return sel;
-  }
-
-  function makeEncodingSelect(selected = 'hex') {
-    const sel = document.createElement('select');
-    ENCODINGS.forEach(v => {
-      const opt = document.createElement('option');
-      opt.value = v; opt.textContent = v;
-      if (v === selected) opt.selected = true;
-      sel.appendChild(opt);
-    });
-    return sel;
-  }
-
-  function addThemeRow(initial = {variable: VAR_OPTIONS[0], encoding: 'hex', color: '#2a6df4', value: ''}) {
-    const row = document.createElement('div');
-    row.className = 'theme-row';
-
-    const varSel = makeVarSelect(initial.variable);
-    const encSel = makeEncodingSelect(initial.encoding);
-    const colorInput = document.createElement('input');
-    colorInput.type = 'color';
-    colorInput.value = initial.color || '#2a6df4';
-
-    const valInput = document.createElement('input');
-    valInput.type = 'text';
-    valInput.placeholder = 'computed value…';
-
-    const delBtn = document.createElement('button');
-    delBtn.type = 'button';
-    delBtn.className = 'theme-row-del';
-    delBtn.title = 'Remove';
-    delBtn.textContent = '−';
-
-    valInput.value = initial.value || formatValue(encSel.value, colorInput.value);
-
-    colorInput.addEventListener('input', () => {
-      valInput.value = formatValue(encSel.value, colorInput.value);
-    });
-    encSel.addEventListener('change', () => {
-      valInput.value = formatValue(encSel.value, colorInput.value);
-    });
-    delBtn.addEventListener('click', () => row.remove());
-
-    row.appendChild(varSel);
-    row.appendChild(encSel);
-    row.appendChild(colorInput);
-    row.appendChild(valInput);
-    row.appendChild(delBtn);
-    rows.appendChild(row);
-  }
-
-  function openThemePopup() {
-    msg.textContent = '';
-    msg.className = 'theme-msg';
-    modal.setAttribute('aria-hidden', 'false');
-    if (!rows.children.length) {
-      addThemeRow();
-    }
-    const firstInput = rows.querySelector('select, input');
-    if (firstInput) firstInput.focus();
-    document.addEventListener('keydown', escToClose);
-  }
-  function closeThemePopup() {
-    modal.setAttribute('aria-hidden', 'true');
-    document.removeEventListener('keydown', escToClose);
-  }
-  function escToClose(e) { if (e.key === 'Escape') closeThemePopup(); }
-
-  async function submitTheme() {
-    const payload = {};
-    for (const row of rows.querySelectorAll('.theme-row')) {
-      const varName = row.querySelector('select')?.value;
-      const val = row.querySelector('input[type="text"]')?.value.trim();
-      if (varName && val) payload[varName] = val;
-    }
-    const keys = Object.keys(payload);
-    if (!keys.length) {
-      msg.textContent = 'Please add at least one variable/value.';
-      msg.className = 'theme-msg error';
-      return;
-    }
-
-    saveBtn.disabled = true;
-    msg.textContent = 'Saving…'; msg.className = 'theme-msg';
-    try {
-      const res = await fetch('/api/config/theme', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error(await res.text().catch(()=>'HTTP '+res.status));
-      msg.textContent = 'Theme updated successfully.'; msg.className = 'theme-msg ok';
-      setTimeout(closeThemePopup, 700);
-    } catch (e) {
-      msg.textContent = 'Failed to save: ' + e.message;
-      msg.className = 'theme-msg error';
-    } finally {
-      saveBtn.disabled = false;
-    }
-  }
-
-  const rowsEl = document.getElementById('satdump-rows');
-  const addBtn = document.getElementById('satdump-add');
-  const saveSatdumpBtn = document.getElementById('satdump-save');
-  let satdumpOriginalNames = new Set();
-
-  const hwSelect = document.getElementById('hwmonitor');
-  const archToggle = document.getElementById('archive-active');
-  const archBlock  = document.getElementById('archive-advanced');
-  const archSpan   = document.getElementById('archive-span');
-  const archRetain = document.getElementById('archive-retain');
-  const cleanDays  = document.getElementById('archive-clean');
-  const saveSettingsBtn    = document.getElementById('settings-save');
-  const statusEl   = document.getElementById('settings-status');
-
-function makeInstanceRow(name = '', address = '', port = '', log = '', isNew = true) {
-  const row = document.createElement('div');
-  row.className = 'row';
-  row.dataset.new = isNew ? '1' : '0';
-  row.dataset.orig = name;
-  const logChecked = (String(log) === '1' || log === 1 || log === true);
-
-  row.innerHTML = `
-    <input type="text"   class="sd-name"    placeholder="Name (e.g., APT Station)" value="${escapeHtml(name)}"   aria-label="Satdump name">
-    <input type="text"   class="sd-address" placeholder="Address (blank = local)"  value="${escapeHtml(address)}" aria-label="Satdump address">
-    <input type="number" class="sd-port"    placeholder="Port (e.g., 8081)"        value="${escapeHtml(port)}"   min="0" max="65535" step="1" aria-label="Satdump port">
-    <input type="checkbox" class="sd-log" ${logChecked ? 'checked' : ''} aria-label="Enable logging">
-    <button type="button" class="remove" title="Remove">×</button>
-  `;
-  row.querySelector('.remove').addEventListener('click', () => row.remove());
-  rowsEl.appendChild(row);
-}
-
-  function clearInstanceRows() {
-    rowsEl.innerHTML = '';
-  }
-
-  function boolToInt(b){ return b ? 1 : 0; }
-
-  function escapeHtml(s) {
-    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
 
   // --- Archiving dependent block ---
   function updateArchiveVisibility() {
@@ -262,7 +21,7 @@ function makeInstanceRow(name = '', address = '', port = '', log = '', isNew = t
   // --- Prefill from server ---
   async function prefillSettings() {
     statusEl.textContent = 'Loading…';
-    await loadSatdumpList();
+    //await loadSatdumpList();
     try {
       const res = await fetch('/local/api/settings', { method: 'GET' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -317,32 +76,6 @@ if (settings['satdump_span'] != null) {
     }
   }
 
-async function loadSatdumpList() {
-  satdumpOriginalNames = new Set();
-  clearInstanceRows();
-  try {
-    const res = await fetch('/local/api/satdump', { credentials: 'include' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const list = await res.json();
-    if (Array.isArray(list) && list.length) {
-      list.sort((a,b)=> String(a.name).localeCompare(String(b.name)));
-      for (const sd of list) {
-        makeInstanceRow(sd.name || '', sd.address || '', String(sd.port ?? '0'), sd.log || '0', /*isNew*/false);
-        if (sd.name) satdumpOriginalNames.add(sd.name);
-      }
-    } else {
-      makeInstanceRow();
-    }
-  } catch (e) {
-    console.error('Failed to load satdump list:', e);
-    makeInstanceRow();
-  }
-}
-
-function clearInstanceRows() {
-  rowsEl.innerHTML = '';
-}
-
   async function saveSettings() {
     const payload = {};
 
@@ -394,19 +127,10 @@ function clearInstanceRows() {
     }
   }
 
-  async function copenModal() {
-    clearMsg();
-    cmodal.classList.remove('hidden');
-    await loadComposites();
-  }
-  function ccloseModal() {
-    cmodal.classList.add('hidden');
-    tbody.innerHTML = '';
-  }
+  
 
   function toastOk(t){ cmsg.textContent = t; cmsg.classList.remove('comp-bad'); cmsg.classList.add('comp-ok'); }
   function toastErr(t){ cmsg.textContent = t; cmsg.classList.remove('comp-ok'); cmsg.classList.add('comp-bad'); }
-  function clearMsg(){ cmsg.textContent=''; cmsg.classList.remove('comp-ok','comp-bad'); }
   function utoastOk(t){ uMsg.textContent = t; uMsg.classList.remove('comp-bad'); uMsg.classList.add('comp-ok'); }
   function utoastErr(t){ uMsg.textContent = t; uMsg.classList.remove('comp-ok'); uMsg.classList.add('comp-bad'); }
   function uclearMsg(){ uMsg.textContent=''; uMsg.classList.remove('comp-ok','comp-bad'); }
@@ -430,103 +154,11 @@ function clearInstanceRows() {
   }, 4000);
 }
 
-  async function loadComposites() {
-    tbody.innerHTML = '';
-    try {
-      const res = await fetch('/local/api/composites', { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch composites');
-      const list = await res.json();
-      list.forEach(c => caddRow({
-        key: c.key, name: c.name, enabled: c.enabled === true || c.enabled === 1
-      }, false));
-    } catch (e) {
-      toastErr(e.message);
-    }
-  }
+  
 
-  function caddRow(c = {key:'', name:'', enabled:true}, isNew = true) {
-    const tr = document.createElement('tr');
-    tr.dataset.new = isNew ? '1' : '0';
-    tr.innerHTML = `
-      <td>
-        <input type="text" class="comp-key" value="${escapeHtml(c.key)}" ${isNew ? '' : 'readonly'}>
-      </td>
-      <td>
-        <input type="text" class="comp-name" value="${escapeHtml(c.name)}">
-      </td>
-      <td style="text-align:center">
-        <input type="checkbox" class="comp-enabled" ${c.enabled ? 'checked' : ''}>
-      </td>
-      <td>
-        <button type="button" class="comp-del">Delete</button>
-      </td>
-    `;
-    tr.querySelector('.comp-del').addEventListener('click', () => conDeleteRow(tr));
-    tbody.appendChild(tr);
-  }
+  
 
-  async function conDeleteRow(tr) {
-    clearMsg();
-    const key = tr.querySelector('.comp-key').value.trim();
-    const isNew = tr.dataset.new === '1';
-    if (isNew || !key) {
-      tr.remove();
-      return;
-    }
-    if (!confirm(`Delete composite "${key}"?`)) return;
-    try {
-      const res = await fetch('/local/api/composites/' + encodeURIComponent(key), {
-        method: 'DELETE',
-        credentials: 'include'
-      });
-      if (!res.ok) throw new Error('Delete failed');
-      tr.remove();
-      toastOk(`Deleted ${key}`);
-    } catch (e) {
-      toastErr(e.message);
-    }
-  }
-  async function csaveAll() {
-    clearMsg();
-    btnSave.disabled = true;
-    try {
-      const rows = $$('#composites-table tbody tr');
-      const payloads = rows.map(tr => {
-        return {
-          key: tr.querySelector('.comp-key').value.trim(),
-          name: tr.querySelector('.comp-name').value.trim(),
-          enabled: tr.querySelector('.comp-enabled').checked
-        };
-      });
-
-      // Basic validation
-      for (const p of payloads) {
-        if (!p.key || !p.name) {
-          throw new Error('Each row needs a non-empty key and name.');
-        }
-      }
-
-      // Upsert each row (server handles insert/update)
-      for (const p of payloads) {
-        const res = await fetch('/local/api/composites', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          credentials: 'include',
-          body: JSON.stringify(p)
-        });
-        if (!res.ok) {
-          const txt = await res.text().catch(()=> '');
-          throw new Error(`Save failed for "${p.key}": ${txt || res.status}`);
-        }
-      }
-      toastOk('All composites saved.');
-      await loadComposites(); // refresh & lock keys
-    } catch (e) {
-      toastErr(e.message);
-    } finally {
-      btnSave.disabled = false;
-    }
-  }
+  
   async function uopenModal() {
   uclearMsg();
   umodal.classList.remove('hidden');
@@ -536,6 +168,7 @@ function ucloseModal() {
   umodal.classList.add('hidden');
   uTbody.innerHTML = '';
 }
+
 umodal.addEventListener('click', (e) => { if (e.target.dataset.uclose) ucloseModal(); });
 uOpenBtn?.addEventListener('click', uopenModal);
 
@@ -698,97 +331,17 @@ async function usaveAll() {
   }
 }
 
-async function saveSatdump() {
-  saveSatdumpBtn.disabled = true;
-  statusEl.textContent = 'Saving Satdump…';
 
-  try {
-    const rows = Array.from(rowsEl.querySelectorAll('.row'));
-    const current = rows.map(r => {
-      const name    = r.querySelector('.sd-name').value.trim();
-      const address = r.querySelector('.sd-address').value.trim();
-      const portStr = r.querySelector('.sd-port').value.trim();
-      const port    = portStr === '' ? 0 : Math.max(0, Math.min(65535, parseInt(portStr, 10) || 0));
-      const log     = boolToInt(r.querySelector('.sd-log').checked);
-      return { el: r, name, address, port, log, isNew: r.dataset.new === '1', orig: r.dataset.orig || '' };
-    });
 
-    for (const c of current) {
-      if (!c.name) throw new Error('Each Satdump row needs a non-empty name.');
-      if (Number.isNaN(c.port) || c.port < 0 || c.port > 65535) {
-        throw new Error(`Invalid port for "${c.name}" (must be 0..65535).`);
-      }
-    }
-
-    for (const c of current) {
-      const isRename = c.orig && c.orig !== c.name;
-      if (c.isNew || isRename || !satdumpOriginalNames.has(c.name)) {
-        const res = await fetch('/local/api/satdump', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          credentials: 'include',
-          body: JSON.stringify({ name: c.name, address: c.address, port: c.port, log: c.log })
-        });
-        if (!res.ok) {
-          const txt = await res.text().catch(()=> '');
-          throw new Error(`Create failed for "${c.name}": ${txt || res.status}`);
-        }
-      } else {
-        const body = { name: c.name, address: c.address, port: c.port, log: c.log };
-        const res = await fetch('/local/api/satdump/' + encodeURIComponent(c.name), {
-          method: 'PUT',
-          headers: {'Content-Type':'application/json'},
-          credentials: 'include',
-          body: JSON.stringify(body)
-        });
-        if (!res.ok) {
-          const txt = await res.text().catch(()=> '');
-          throw new Error(`Update failed for "${c.name}": ${txt || res.status}`);
-        }
-      }
-    }
-
-    const currentNames = new Set(current.map(c => c.name));
-    const toDelete = Array.from(satdumpOriginalNames).filter(n => !currentNames.has(n));
-    for (const name of toDelete) {
-      const res = await fetch('/local/api/satdump/' + encodeURIComponent(name), {
-        method: 'DELETE',
-        credentials: 'include'
-      });
-      if (!res.ok) {
-        const txt = await res.text().catch(()=> '');
-        throw new Error(`Delete failed for "${name}": ${txt || res.status}`);
-      }
-    }
-
-    await loadSatdumpList();
-    statusEl.textContent = 'Satdump saved';
-    setTimeout(()=>{ statusEl.textContent=''; }, 1200);
-  } catch (e) {
-    console.error(e);
-    statusEl.textContent = `Satdump save failed: ${e.message}`;
-  } finally {
-    saveSatdumpBtn.disabled = false;
-  }
-}
-
-addBtn?.addEventListener('click', () => makeInstanceRow());
-saveSatdumpBtn?.addEventListener('click', saveSatdump);
-
-uBtnAdd?.addEventListener('click', () => uaddRow());
-uBtnSave?.addEventListener('click', usaveAll);
+ uBtnAdd?.addEventListener('click', () => uaddRow());
+ uBtnSave?.addEventListener('click', usaveAll);
 
   saveSettingsBtn.addEventListener('click', saveSettings);
 
   updateArchiveVisibility();
   prefillSettings();
 
-  openBtn?.addEventListener('click', openThemePopup);
-  closeBtn?.addEventListener('click', closeThemePopup);
-  cancelBtn?.addEventListener('click', closeThemePopup);
-  modal?.querySelector('.theme-modal-backdrop')?.addEventListener('click', closeThemePopup);
-  addRowBtn?.addEventListener('click', () => addThemeRow());
-  saveBtn?.addEventListener('click', submitTheme);
+
   btnOpen.addEventListener('click', copenModal);
   cmodal.addEventListener('click', (e) => { if (e.target.dataset.close) ccloseModal(); });
   btnAdd.addEventListener('click', () => caddRow());

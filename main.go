@@ -470,6 +470,10 @@ func (app *Application) setupMiscRoutes(r *mux.Router) {
 	if err != nil {
 		log.Fatal("Failed to create HTML filesystem:", err)
 	}
+	partialFS, err := fs.Sub(embeddedFiles, "public/html/partials")
+	if err != nil {
+		log.Fatal("Failed to create HTML filesystem:", err)
+	}
 
 	r.Handle("/local/configure-passes", app.requireAuth(1, app.serveEmbeddedHTML("template_editor.html", htmlFS))).Methods("GET")
 	tapi := handlers.NewTemplatesAdminAPI(app.localStore) // make sure StationPreferences is opened at startup
@@ -489,6 +493,12 @@ func (app *Application) setupMiscRoutes(r *mux.Router) {
 	r.Handle("/colors.css", &handlers.ColorsCSSHandler{Store: app.localStore})
 	r.Handle("/local/stats", app.requireAuth(3, app.serveEmbeddedHTML("stats.html", htmlFS))).Methods("GET")
 	r.Handle("/local/admin", app.requireAuth(1, app.serveEmbeddedHTML("admin-center.html", htmlFS))).Methods("GET")
+	r.Handle("/local/admin/general", app.requireAuth(1, app.serveEmbeddedHTML("admin-gen.html", partialFS))).Methods("GET")
+	r.Handle("/local/admin/net", app.requireAuth(1, app.serveEmbeddedHTML("admin-net.html", partialFS))).Methods("GET")
+	r.Handle("/local/admin/storage", app.requireAuth(1, app.serveEmbeddedHTML("admin-stg.html", partialFS))).Methods("GET")
+	r.Handle("/local/admin/satdump", app.requireAuth(1, app.serveEmbeddedHTML("admin-sat.html", partialFS))).Methods("GET")
+	r.Handle("/local/admin/passes", app.requireAuth(1, app.serveEmbeddedHTML("admin-pss.html", partialFS))).Methods("GET")
+	r.Handle("/local/admin/images", app.requireAuth(1, app.serveEmbeddedHTML("admin-img.html", partialFS))).Methods("GET")
 	r.Handle("/local/api/disk-stats", app.requireAuth(3, http.HandlerFunc(handlers.ServeDiskStats(app.config.Paths.LiveOutputDir)))).Methods("GET")
 	r.Handle("/local/api/rotate-pass", app.requireAuth(3, http.HandlerFunc(handlers.ServeRotatePass180(app.config.Paths.LiveOutputDir, app.config.Paths.ThumbnailDir)))).Methods("POST")
 

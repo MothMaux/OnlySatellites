@@ -1,0 +1,62 @@
+<section class="card">
+<div>
+<h3>File Paths</h3>
+<label class="setting-row">
+  <svg xmlns="http://www.w3.org/2000/svg" height="100%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-photo"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 8h.01" /><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12" /><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" /><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3" /></svg>
+  Thumbnails<input class="setting-field"id=thumbDir type="text">
+</label><label class="setting-row">
+  <svg xmlns="http://www.w3.org/2000/svg" height="100%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-logs"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 12h.01" /><path d="M4 6h.01" /><path d="M4 18h.01" /><path d="M8 18h2" /><path d="M8 12h2" /><path d="M8 6h2" /><path d="M14 6h6" /><path d="M14 12h6" /><path d="M14 18h6" /></svg>
+  Logs<input class="setting-field"id="thumbDir"type="text"></label>
+<div id=admin-center-stats style="width:calc(100% - 104px);max-width:900px;margin:24px auto;padding:16px;border:1px solid var(--border);border-radius:12px">
+<p>Loading stats...</p>
+</div>
+</section>
+<script>
+(() => {
+  if (window.admin_storageInit) return;
+
+  window.admin_storageInit = async function admin_storageInit() {
+  const archToggle = document.getElementById('archive-active');
+  const archBlock  = document.getElementById('archive-advanced');
+  const archSpan   = document.getElementById('archive-span');
+  const archRetain = document.getElementById('archive-retain');
+  const cleanDays  = document.getElementById('archive-clean');
+  const statsDiv = document.getElementById('admin-center-stats');
+
+  try {
+    const res = await fetch('api/disk-stats');
+    const data = await res.json();
+
+    if (data.error) {
+      statsDiv.innerHTML = `<p>Error fetching data: ${data.error}</p>`;
+      return;
+    }
+
+    const formatBytes = (bytes) => {
+      const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+      let i = 0;
+      while (bytes >= 1024 && i < units.length - 1) {
+        bytes /= 1024;
+        i++;
+      }
+      return `${bytes.toFixed(1)} ${units[i]}`;
+    };
+
+    statsDiv.innerHTML = `
+      <h2>Disk & Retention Stats</h2>
+      <ul>
+        <li><strong>Total Disk Size:</strong> ${formatBytes(data.disk.total)}</li>
+        <li><strong>Free Disk Space:</strong> ${formatBytes(data.disk.free)}</li>
+        <li><strong>Live Output Total Size:</strong> ${formatBytes(data.live_output.totalSize)}</li>
+        <li><strong>Live Output (Past 2 Weeks):</strong> ${formatBytes(data.live_output.recentSize)}</li>
+        <li><strong>Approx. Data Retention Span:</strong> ${data.estimates.dataRetentionDays ?? 'Unknown'} days</li>
+        <li><strong>Approx. Time Until Disk Full:</strong> ${data.estimates.timeToDiskFullDays ?? 'Unknown'} days</li>
+      </ul>
+    `;
+  } catch (err) {
+    console.error('Failed to fetch admin stats:', err);
+    statsDiv.innerHTML = `<p>Error loading data.</p>`;
+  }
+};
+})();
+</script>
