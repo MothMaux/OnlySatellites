@@ -2,19 +2,19 @@
 <h3>General station settings<span class=info title="set what visitors see on your page or create logins for your friends">ⓘ</span></h3><div style="display:flex;flex-wrap:wrap;">
 <label class="setting-row">
   <svg xmlns="http://www.w3.org/2000/svg" height="100%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-label"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M16.52 7h-10.52a2 2 0 0 0 -2 2v6a2 2 0 0 0 2 2h10.52a1 1 0 0 0 .78 -.375l3.7 -4.625l-3.7 -4.625a1 1 0 0 0 -.78 -.375" /></svg>
-  Station Name<input class="setting-field"id="thumbDir"type="text">
+  Station Name<input class="setting-field"id="stationName"type="text">
 </label><label class="setting-row">
   <svg xmlns="http://www.w3.org/2000/svg" height="100%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-note"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M13 20l7 -7" /><path d="M13 20v-6a1 1 0 0 1 1 -1h6v-7a2 2 0 0 0 -2 -2h-12a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7" /></svg>
-  Station Description<input class="setting-field"id="thumbDir"type="text"></label>
+  Station Description<input class="setting-field"id="stationMeta"type="text"></label>
 <form class="setting-card"><label>
   <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="80%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-color-filter"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M13.58 13.79c.27 .68 .42 1.43 .42 2.21c0 1.77 -.77 3.37 -2 4.46a5.93 5.93 0 0 1 -4 1.54c-3.31 0 -6 -2.69 -6 -6c0 -2.76 1.88 -5.1 4.42 -5.79" /><path d="M17.58 10.21c2.54 .69 4.42 3.03 4.42 5.79c0 3.31 -2.69 6 -6 6a5.93 5.93 0 0 1 -4 -1.54" /><path d="M6 8a6 6 0 1 0 12 0a6 6 0 1 0 -12 0" /></svg>
-  <input type="button"class="setting-button"value="Customize Theme"onclick="copenModal();"/>
+  <input type="button"class="setting-button"value="Customize Theme"onclick="openThemePopup();"/>
 </label></form>
-<form class="setting-card"><label>
+<form class="setting-card"action="messages-admin"><label>
   <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="80%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-mail-spark"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M19 22.5a4.75 4.75 0 0 1 3.5 -3.5a4.75 4.75 0 0 1 -3.5 -3.5a4.75 4.75 0 0 1 -3.5 3.5a4.75 4.75 0 0 1 3.5 3.5" /><path d="M11.5 19h-6.5a2 2 0 0 1 -2 -2v-10a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v5" /><path d="M3 7l9 6l9 -6" /></svg>
-  <input type="button"class="setting-button"value="Create Post"onclick="copenModal();"/>
+  <input type="submit"class="setting-button"value="Create Post"/>
 </label></form>
-<form class="setting-card"><label>
+<form class="setting-card"action="configure-about"><label>
   <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="80%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-article"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 6a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2l0 -12" /><path d="M7 8h10" /><path d="M7 12h10" /><path d="M7 16h10" /></svg>
   <input type="button"class="setting-button"value="Edit About Page"onclick="copenModal();"/>
 </label></form></div>
@@ -28,14 +28,15 @@
 <h3>Access & Users</h3><div style="display:flex;flex-wrap:wrap;">
 <form class="setting-card"><label>
   <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="80%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-user"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" /><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /></svg>
-  <input type="button"class="setting-button"value="Manage Users"onclick="copenModal();"/>
+  <input type="button"class="setting-button"value="Manage Users"onclick="uopenModal();"/>
 </label></form>
 <form style="border-radius:10px;width:calc(92% + min(4%, 28px));max-width:calc(500px + min(4%, 28px));margin:min(2%, 14px);background:var(--bg-light);"><label>
   <code style="width:100%;height: 100%;">Console</code>
 </label></form></div>
-<div id=themeModal class=theme-modal aria-hidden=true>
-<div class=theme-modal-backdrop></div>
-<div class=theme-modal-content role=dialog aria-modal=true aria-labelledby=themeModalTitle>
+
+<div id=themeModal class="comp-modal hidden">
+<div class=comp-modal-backdrop></div>
+<div class=comp-modal-card role=dialog aria-modal=true aria-labelledby=themeModalTitle>
 <div class=theme-modal-header>
 <h3 id=themeModalTitle>Edit Theme Colors</h3>
 <button type=button class=theme-close id=themeCloseBtn aria-label=Close>✕</button>
@@ -48,11 +49,12 @@
 </div>
 <div class=theme-modal-footer>
 <button type=button id=themeCancelBtn class=theme-btn-secondary>Cancel</button>
-<button type=button id=themeSaveBtn class=theme-btn-primary>Save</button>
+<input type=button onclick="submitTheme();"value="Save"id=themeSaveBtn class=theme-btn-primary/>
 </div>
 </div>
 </div>
-<div id=users-modal class="comp-modal hidden" aria-hidden=true>
+
+<div id=users-modal class="comp-modal hidden">
 <div class=comp-modal-backdrop data-uclose=1></div>
 <div class=comp-modal-card role=dialog aria-modal=true aria-labelledby=usersModalTitle>
 <div class=comp-modal-head>
@@ -85,15 +87,19 @@
 <script>
 (() => {
   if (window.admin_generalInit) return; 
-
 window.admin_generalInit = async function admin_generalInit() {
+closeBtn?.addEventListener('click', closeModal);
+cancelBtn?.addEventListener('click', closeModal);
+modal?.querySelector('.comp-modal-backdrop')?.addEventListener('click', closeModal);
+addRowBtn?.addEventListener('click', () => addThemeRow());
+};
+})();
 const VAR_OPTIONS = [
     'bg','bg-dark','bg-light','border','border-muted',
     'danger','highlight','info','primary','secondary',
     'success','text','text-muted','warning' ];
 const ENCODINGS = ['hex', 'rgb', 'hsl', 'oklch'];
 const modal = document.getElementById('themeModal');
-const openBtn = document.getElementById('openThemeBtn');
 const closeBtn = document.getElementById('themeCloseBtn');
 const cancelBtn = document.getElementById('themeCancelBtn');
 const saveBtn = document.getElementById('themeSaveBtn');
@@ -101,6 +107,9 @@ const addRowBtn = document.getElementById('addThemeRowBtn');
 const rows = document.getElementById('themeRows');
 const msg = document.getElementById('themeMsg');
 const hwSelect = document.getElementById('hwmonitor');
+const cmsg = document.getElementById('users-msg');
+const umodal = document.getElementById('users-modal');
+const uTbody = document.querySelector('#users-table tbody');
 function hexToRgb(hex) {
     const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     if (!m) return null;
@@ -123,7 +132,6 @@ function rgbToHsl(r, g, b) {
     }
     return {h: Math.round(h*360), s: Math.round(s*100), l: Math.round(l*100)};
   }
-
 const srgbToLinear = c => {
     c /= 255;
     return (c <= 0.04045) ? c/12.92 : Math.pow((c + 0.055)/1.055, 2.4);
@@ -187,6 +195,19 @@ function makeEncodingSelect(selected = 'hex') {
     return sel;
   }
 
+function openThemePopup() {
+    msg.textContent = '';
+    msg.className = 'theme-msg';
+    modal.classList.remove('hidden');
+    if (!rows.children.length) {
+      addThemeRow();
+    }
+    const firstInput = rows.querySelector('select, input');
+    if (firstInput) firstInput.focus();
+    document.addEventListener('keydown', escToClose);
+  }
+function escToClose(e) { if (e.key === 'Escape') closeModal(); }
+
 function addThemeRow(initial = {variable: VAR_OPTIONS[0], encoding: 'hex', color: '#2a6df4', value: ''}) {
     const row = document.createElement('div');
     row.className = 'theme-row';
@@ -225,23 +246,6 @@ function addThemeRow(initial = {variable: VAR_OPTIONS[0], encoding: 'hex', color
     rows.appendChild(row);
   }
 
-function openThemePopup() {
-    msg.textContent = '';
-    msg.className = 'theme-msg';
-    modal.setAttribute('aria-hidden', 'false');
-    if (!rows.children.length) {
-      addThemeRow();
-    }
-    const firstInput = rows.querySelector('select, input');
-    if (firstInput) firstInput.focus();
-    document.addEventListener('keydown', escToClose);
-  }
-function closeThemePopup() {
-    modal.setAttribute('aria-hidden', 'true');
-    document.removeEventListener('keydown', escToClose);
-  }
-function escToClose(e) { if (e.key === 'Escape') closeThemePopup(); }
-
 async function submitTheme() {
     const payload = {};
     for (const row of rows.querySelectorAll('.theme-row')) {
@@ -276,32 +280,209 @@ async function submitTheme() {
     }
   }
 
-openBtn?.addEventListener('click', openThemePopup);
-closeBtn?.addEventListener('click', closeThemePopup);
-cancelBtn?.addEventListener('click', closeThemePopup);
-modal?.querySelector('.theme-modal-backdrop')?.addEventListener('click', closeThemePopup);
-addRowBtn?.addEventListener('click', () => addThemeRow());
-saveBtn?.addEventListener('click', submitTheme);
-};
-})();
+async function uopenModal() {
+  clearMsg();
+  umodal.classList.remove('hidden');
+  document.addEventListener('keydown', escToClose);
+  await uloadUsers();
+}
+function closeModal() {
+  umodal.classList.add('hidden');
+  modal.classList.add('hidden');
+  uTbody.innerHTML = '';
+  document.removeEventListener('keydown', escToClose);
+}
+function uaddRow(u = { id:null, username:'', level:5 }, isNew = true) {
+  const tr = document.createElement('tr');
+  tr.dataset.new = isNew ? '1' : '0';
+  tr.dataset.id  = u.id ?? '';
+
+  tr.innerHTML = `
+    <td>
+      <input type="text" class="u-username" value="${escapeHtml(u.username||'')}" ${isNew ? '' : ''} aria-label="Username">
+    </td>
+    <td>
+      <input type="number" class="u-level" min="0" max="10" step="1" value="${Number.isFinite(u.level)? u.level : 5}" aria-label="Auth level">
+    </td>
+    <td style="display:flex; gap:6px; align-items:center;">
+      <input type="text" class="u-password" placeholder="(leave blank to keep)" aria-label="Password">
+      <button type="button" class="u-gen" title="Generate">🎲</button>
+    </td>
+    <td>
+      <button type="button" class="u-reset">Reset</button>
+      <button type="button" class="u-del" ${isNew?'disabled':''} title="Delete">Delete</button>
+    </td>
+  `;
+
+  // Wire buttons
+  const genBtn   = tr.querySelector('.u-gen');
+  const resetBtn = tr.querySelector('.u-reset');
+  const delBtn   = tr.querySelector('.u-del');
+
+  genBtn.addEventListener('click', () => {
+    // client-side random; server will hash on reset
+    const pw = Math.random().toString(36).slice(-10) + '!';
+    tr.querySelector('.u-password').value = pw;
+  });
+
+  resetBtn.addEventListener('click', async () => {
+    uclearMsg();
+    const id = Number(tr.dataset.id||0);
+    const pw = tr.querySelector('.u-password').value.trim();
+    if (!id) { utoastErr('Save row first, then reset password.'); return; }
+    if (!pw) { // ask server to generate if empty
+      try {
+        const res = await fetch(`/local/api/users/${id}/reset-password`, {
+          method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+          body: JSON.stringify({ generate: true })
+        });
+        const data = await res.json().catch(()=> ({}));
+        if (!res.ok) throw new Error(data.error || data.message || `HTTP ${res.status}`);
+        tr.querySelector('.u-password').value = data.newPassword || '';
+        utoastOk('Password generated.');
+      } catch (e) { utoastErr('Reset failed: '+e.message); }
+      return;
+    }
+    // explicit new password
+    try {
+      const res = await fetch(`/local/api/users/${id}/reset-password`, {
+        method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+        body: JSON.stringify({ newPassword: pw })
+      });
+      if (!res.ok) throw new Error(await res.text().catch(()=>`HTTP ${res.status}`));
+      utoastOk('Password updated.');
+    } catch (e) { utoastErr('Reset failed: '+e.message); }
+  });
+
+  delBtn.addEventListener('click', async () => {
+    uclearMsg();
+    if (tr.dataset.new === '1') { tr.remove(); return; }
+    const id = Number(tr.dataset.id||0);
+    if (!id) return;
+    if (!confirm(`Delete user "${tr.querySelector('.u-username').value}"?`)) return;
+    try {
+      const res = await fetch(`/local/api/users/${id}`, { method:'DELETE', credentials:'include' });
+      if (!res.ok) throw new Error(await res.text().catch(()=>`HTTP ${res.status}`));
+      tr.remove();
+      utoastOk('User deleted.');
+    } catch (e) { utoastErr('Delete failed: '+e.message); }
+  });
+
+  uTbody.appendChild(tr);
+}
+
+async function uloadUsers() {
+  uTbody.innerHTML = '';
+  try {
+    const res = await fetch('/local/api/users', { credentials:'include' });
+    if (!res.ok) throw new Error('Failed to fetch users');
+    const list = await res.json();
+    if (list != null)
+    {
+      list.forEach(u => uaddRow({ id:u.id, username:u.username, level: u.level }, false));
+    }
+  } catch (e) {
+    utoastErr(e.message);
+  }
+}
+
+async function usaveAll() {
+  uclearMsg();
+  uBtnSave.disabled = true;
+  try {
+    const rows = Array.from(uTbody.querySelectorAll('tr'));
+    for (const tr of rows) {
+      const isNew   = tr.dataset.new === '1';
+      const id      = Number(tr.dataset.id||0);
+      const user    = tr.querySelector('.u-username').value.trim();
+      const level   = parseInt(tr.querySelector('.u-level').value, 10);
+      const pwField = tr.querySelector('.u-password');
+      const pw      = (pwField.value||'').trim();
+
+      if (!user || isNaN(level) || level<0 || level>10) {
+        throw new Error('Each row needs a username and a level 0..10.');
+      }
+
+      if (isNew) {
+        if (!pw) throw new Error(`New user "${user}" requires a password (or use 🎲 then Save).`);
+        const res = await fetch('/local/api/users', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          credentials:'include',
+          body: JSON.stringify({ username:user, level, password: pw })
+        });
+        const data = await res.json().catch(()=> ({}));
+        if (!res.ok) throw new Error(data.error || `Create failed for "${user}"`);
+        tr.dataset.new = '0';
+        tr.dataset.id  = data.id;
+        tr.querySelector('.u-del').disabled = false;
+        pwField.value = '';
+      } else {
+        {
+          const res = await fetch(`/local/api/users/${id}/username`, {
+            method:'PUT', headers:{'Content-Type':'application/json'}, credentials:'include',
+            body: JSON.stringify({ username: user })
+          });
+          if (!res.ok) throw new Error(`Update username failed for id=${id}`);
+        }
+        {
+          const res = await fetch(`/local/api/users/${id}/level`, {
+            method:'PUT', headers:{'Content-Type':'application/json'}, credentials:'include',
+            body: JSON.stringify({ level })
+          });
+          if (!res.ok) throw new Error(`Update level failed for id=${id}`);
+        }
+        if (pw) {
+          const res = await fetch(`/local/api/users/${id}/reset-password`, {
+            method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+            body: JSON.stringify({ newPassword: pw })
+          });
+          if (!res.ok) throw new Error(`Password reset failed for "${user}"`);
+          pwField.value = '';
+        }
+      }
+    }
+    utoastOk('All users saved.');
+    await uloadUsers();
+  } catch (e) {
+    utoastErr(e.message);
+  } finally {
+    uBtnSave.disabled = false;
+  }
+}
 </script>
 <style>
-.theme-modal{position:fixed;inset:0;display:none;z-index:1000}
-.theme-modal[aria-hidden=false]{display:block}
-.theme-modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.4)}
-.theme-modal-content{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#121212;color:#eee;width:min(92vw,760px);border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+.hidden{display:none;}
+.comp-modal {position:fixed;inset:0;z-index:1000;}
+.comp-modal-backdrop{position:absolute;inset:0;background:var(--bg); }
+.comp-modal-card{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#121212;color:var(--text);width:min(92vw,760px);border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+
 .theme-modal-footer,.theme-modal-header{padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
 .theme-modal-body{padding:0 16px 16px}.theme-close{background:0 0;border:0;color:#aaa;font-size:18px;cursor:pointer}
 .theme-rows{display:grid;gap:10px;margin:8px 0}.theme-row{display:grid;grid-template-columns:1.2fr 1fr 130px 1.6fr auto;gap:8px;align-items:center}
 .theme-row input[type=color],.theme-row input[type=text],
-.theme-row select{width:100%;padding:8px;border-radius:8px;border:1px solid #333;background:#1b1b1b;color:#eee}
+.theme-row select{width:100%;padding:8px;border-radius:8px;border:1px solid #333;background:#1b1b1b;color:var(--text)}
 .theme-row input[type=color]{padding:0;height:40px}
-.theme-row-del{padding:0 10px;border-radius:8px;border:1px solid #333;background:#1b1b1b;color:#eee;cursor:pointer;height:40px}
-.theme-add-row{margin-top:6px;border:1px dashed #444;background:0 0;color:#ddd;padding:6px 10px;border-radius:8px;cursor:pointer}
+.theme-row-del{padding:0 10px;border-radius:8px;border:1px solid #333;background:#1b1b1b;color:var(--text);cursor:pointer;height:40px}
+.theme-add-row{margin-top:6px;border:1px dashed var(--border);background:0 0;color:var(--text-muted);padding:6px 10px;border-radius:8px;cursor:pointer}
 .theme-btn-primary,.theme-btn-secondary{padding:8px 12px;border-radius:8px;border:1px solid #333;cursor:pointer}
-.theme-btn-secondary{background:#1b1b1b;color:#ddd}
-.theme-btn-primary{background:#2a6df4;color:#fff;border-color:#2a6df4}
-.theme-msg{margin-top:10px;min-height:20px;font-size:.95em;color:#ccc}
-.theme-msg.error{color:#ff8585}
-.theme-msg.ok{color:#7bffb9}
+.theme-btn-secondary{background:var(--secondary);color:var(--text-muted)}
+.theme-btn-primary{background:var(--primary);color:var(--text);border-color:var(--border)}
+.theme-msg{margin-top:10px;min-height:20px;font-size:.95em;color:var(--text-muted)}
+.theme-msg.error{color:var(--danger)}
+.theme-msg.ok{color:var(--success)}
+
+
+
+.comp-modal-head { display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #333; padding:8px 12px; }
+.comp-modal-body { padding: 12px; }
+.comp-close { font-size: 20px; line-height: 1; background: transparent; color: #eee; border: 0; cursor: pointer; }
+.comp-actions { display:flex; gap: 8px; margin-bottom: 10px; }
+.comp-table-wrap { max-height: 60vh; overflow:auto; border:1px solid #333; border-radius: 8px; }
+.comp-table { width: 100%; border-collapse: collapse; }
+.comp-table th, .comp-table td { border-bottom:1px solid #222; padding: 8px; }
+.comp-table input[type="text"] { width: 100%; }
+.comp-msg { margin-top: 8px; min-height: 20px; }
+.comp-bad { color: #ff6b6b; }
+.comp-ok { color: #63e6be; }
 </style>

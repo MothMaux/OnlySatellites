@@ -50,14 +50,14 @@
 --text-muted:oklch(0.76 0.1 301);
 --warning:oklch(0.7 0.15 100)
 }
-body { background-color:var(--bg); font-family:sans-serif; margin:0; padding:0 }
-h3 {display:flex;align-items:center;gap:.5rem}
-.navbar { background-color:var(--bg-light); overflow:hidden; width:100% }
-.navbar a { align-content:center; color:var(--text); float:left; font-size:17px; height:34px;
-  overflow:hidden; padding:0; text-align:center; text-decoration:none; width:20% }
-.navbar a.active { background-color:var(--bg-dark); color:var(--text-muted) }
-@media screen and (max-width: 525px) { 
-  .navbar a { display:block; float:none; text-align:left; width:100% }
+body{background-color:var(--bg); font-family:sans-serif;margin:0;padding:0}
+h3{display:flex;align-items:center;gap:.5rem}
+.navbar{background-color:var(--bg-light);overflow:hidden;width:100%}
+.navbar a{align-content:center;color:var(--text);float:left;font-size:17px;height:34px;
+  overflow:hidden;padding:0;text-align:center;text-decoration:none;width:20%}
+.navbar a.active{background-color:var(--bg-dark);color:var(--text-muted)}
+@media screen and (max-width:525px){ 
+  .navbar a {display:block;float:none;text-align:left;width:100% }
   .msg__title { padding: 14px 16px 0 14px;}}
 #container { display:flex; gap:2rem; padding:1rem }
 #admin-center-stats { color:var(--text) }
@@ -84,7 +84,7 @@ hr{display:block;margin-block-start:0.5em;margin-block-end:0.5em;margin-inline-s
 .admin-sidebar input{color:var(--text);background:var(--bg-light);border:none;border-radius:12px;width:100%;padding:16px 12px;margin-top:6px;cursor:pointer}
 .admin-sidebar input:hover{background:var(--highlight);color:var(--text);font-size:20px;}
 .setting-card {border-radius:10px;width:46%;max-width:250px;margin:min(2%, 14px);aspect-ratio:1;background:var(--bg-light);}
-.setting-button {color:var(--text);background:var(--bg-light);border:none;border-radius:16px;width:100%;height:20%;}
+.setting-button {color:var(--text);background:var(--bg-light);border:none;border-radius:16px;width:100%;height:20%;font-size:16px}
 .setting-toggle{color:var(--text);display:block;height:100%;text-align:center;}
 .setting-toggle input:checked + svg {stroke:var(--success);}
 .setting-row{height:86px;width:100%;align-items:center;display:grid;grid-template-columns:86px 100px calc(100% - 236px) minmax(0px, 20px)}
