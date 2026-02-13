@@ -392,6 +392,11 @@ func (c *updCtx) ensureColumnExists(table, column, colDef string) error {
 
 func (c *updCtx) clearTables() error {
 	_, err := c.db.Exec("DELETE FROM images; DELETE FROM passes;")
+	if err != nil {
+		return err
+	}
+
+	_, err = c.db.Exec("DELETE FROM sqlite_sequence WHERE name IN ('images', 'passes');")
 	return err
 }
 
@@ -639,6 +644,128 @@ func (c *updCtx) processPassOptimized(passFolder string, images []Image, dataset
 	return tx.Commit()
 }
 
+// Only updates only metadata fields (composite, sensor, etc.) without deleting/re-adding images
+func (c *updCtx) updateMetadata(existingPasses map[string]existingPassData) error {
+	updated := 0
+	errors := 0
+
+	fmt.Println("Starting metadata-only update...")
+
+	for passName, passData := range existingPasses {
+		// Find the pass type for this pass
+		var matchedTypeName string
+		for pattern, typeName := range c.passCfg.Passes.FolderIncludes {
+			p := strings.TrimSpace(pattern)
+			if p == "" {
+				continue
+			}
+
+			// Simple substring match (most common case)
+			if !strings.ContainsAny(p, "*/") {
+				if strings.Contains(strings.ToLower(passName), strings.ToLower(p)) {
+					matchedTypeName = typeName
+					break
+				}
+			} else {
+				// For glob patterns, check if the pass name matches
+				matched, _ := filepath.Match(p, passName)
+				if matched {
+					matchedTypeName = typeName
+					break
+				}
+			}
+		}
+
+		if matchedTypeName == "" {
+			continue
+		}
+
+		passType, exists := c.passCfg.PassTypes[matchedTypeName]
+		if !exists {
+			continue
+		}
+
+		// Get all images for this pass
+		rows, err := c.db.Query(`SELECT id, path FROM images WHERE passId = ?`, passData.id)
+		if err != nil {
+			fmt.Printf("Error querying images for pass %s: %v\n", passName, err)
+			errors++
+			continue
+		}
+
+		type imageRecord struct {
+			id   int64
+			path string
+		}
+		var images []imageRecord
+
+		for rows.Next() {
+			var img imageRecord
+			if err := rows.Scan(&img.id, &img.path); err != nil {
+				continue
+			}
+			images = append(images, img)
+		}
+		rows.Close()
+
+		if len(images) == 0 {
+			continue
+		}
+
+		// Update each image's metadata based on the config
+		for _, img := range images {
+			// Determine which directory this image is from
+			relPath := img.path
+			parts := strings.Split(filepath.ToSlash(relPath), "/")
+			if len(parts) < 2 {
+				continue
+			}
+
+			// The directory name is typically the second-to-last component
+			// e.g., "pass_folder/RGB/image.jpg" -> "RGB"
+			dirName := parts[len(parts)-2]
+
+			// Find matching image dir config
+			dirConfig, exists := passType.ImageDirs[dirName]
+			if !exists {
+				// Try matching with case-insensitive comparison
+				for configDir, cfg := range passType.ImageDirs {
+					if strings.EqualFold(configDir, dirName) {
+						dirConfig = cfg
+						exists = true
+						break
+					}
+				}
+			}
+
+			if !exists {
+				continue
+			}
+
+			// Update the metadata fields
+			_, err := c.db.Exec(`
+				UPDATE images
+				SET composite = ?, sensor = ?, corrected = ?, filled = ?
+				WHERE id = ?`,
+				dirConfig.Composite,
+				dirConfig.Sensor,
+				boolToInt(dirConfig.IsCorrected),
+				boolToInt(dirConfig.IsFilled),
+				img.id)
+
+			if err != nil {
+				fmt.Printf("Error updating image %d: %v\n", img.id, err)
+				errors++
+			} else {
+				updated++
+			}
+		}
+	}
+
+	fmt.Printf("Metadata update complete. Updated %d images (%d errors)\n", updated, errors)
+	return nil
+}
+
 func (c *updCtx) processPasses(mode int8) error {
 	if c.cfg == nil {
 		return fmt.Errorf("processPasses: AppConfig is nil")
@@ -657,6 +784,10 @@ func (c *updCtx) processPasses(mode int8) error {
 	existingPasses, err := c.getAllExistingPasses()
 	if err != nil {
 		return fmt.Errorf("load existing passes: %w", err)
+	}
+
+	if mode == 2 {
+		return c.updateMetadata(existingPasses)
 	}
 
 	// support two modes:
@@ -808,4 +939,47 @@ func RunDBUpdate(cfg *config.AppConfig, passCfg *config.PassConfig, repopulate b
 		return uctx.processPasses(0)
 	}
 	return uctx.processPasses(1)
+}
+
+func RunDBMetadataUpdate(cfg *config.AppConfig, passCfg *config.PassConfig) error {
+	if cfg == nil {
+		return fmt.Errorf("RunDBMetadataUpdate: cfg is nil")
+	}
+	if strings.TrimSpace(cfg.Paths.DataDir) == "" {
+		return fmt.Errorf("RunDBMetadataUpdate: database.path missing")
+	}
+	if strings.TrimSpace(cfg.Paths.LiveOutputDir) == "" {
+		return fmt.Errorf("RunDBMetadataUpdate: paths.live_output_dir missing")
+	}
+
+	ctx := context.Background()
+	prefsDBPath := filepath.Join(strings.TrimSpace(cfg.Paths.DataDir), "local_data.db")
+	if loaded, err := loadPassConfigFromPrefs(ctx, prefsDBPath); err == nil {
+		passCfg = loaded
+		fmt.Println("PassConfig loaded")
+	} else {
+		fmt.Println("PassConfig could not be loaded: ", err)
+	}
+	if passCfg == nil {
+		return fmt.Errorf("RunDBMetadataUpdate: no pass config available")
+	}
+
+	db, err := sql.Open("sqlite3", filepath.Join(cfg.Paths.DataDir, "image_metadata.db"))
+	if err != nil {
+		return fmt.Errorf("open db: %w", err)
+	}
+	defer db.Close()
+
+	uctx := &updCtx{
+		cfg:           cfg,
+		passCfg:       passCfg,
+		db:            db,
+		liveOutputDir: cfg.Paths.LiveOutputDir,
+	}
+
+	if err := uctx.initializeDatabase(); err != nil {
+		return fmt.Errorf("init schema: %w", err)
+	}
+
+	return uctx.processPasses(2)
 }
