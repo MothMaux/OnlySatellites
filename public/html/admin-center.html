@@ -28,7 +28,6 @@
       <button data-page="satdump">Satdump</button>
       <button data-page="passes">Passes</button>
       <button data-page="images">Images</button>
-      <input type="button"value="Save"onclick="saveSettings();"/>
     </aside>
 
     <main id="admin-content">
@@ -81,8 +80,8 @@ hr{display:block;margin-block-start:0.5em;margin-block-end:0.5em;margin-inline-s
 .admin-sidebar{background:var(--bg-dark);color:var(--text-muted);padding:12px;border-right:1px solid var(--border-muted);}
 .admin-sidebar button{background:none;border:none;padding:12px 10px;text-align:center;border-radius:12px;cursor:pointer;width:100%;color:var(--text);margin-top:6px;font-size:16px;}
 .admin-sidebar button.active, .admin-sidebar button:hover{background:var(--bg-light);color:var(--text);font-weight:700;}
-.admin-sidebar input{color:var(--text);background:var(--bg-light);border:none;border-radius:12px;width:100%;padding:16px 12px;margin-top:6px;cursor:pointer}
-.admin-sidebar input:hover{background:var(--highlight);color:var(--text);font-size:20px;}
+.setting-save{color:var(--text);background:var(--bg-light);border:none;border-radius:12px;width:100%;padding:16px 12px;margin-top:6px;cursor:pointer}
+.setting-save:hover{background:var(--highlight);color:var(--text);font-size:20px;}
 .setting-card {border-radius:10px;width:46%;max-width:250px;margin:min(2%, 14px);aspect-ratio:1;background:var(--bg-light);}
 .setting-button {color:var(--text);background:var(--bg-light);border:none;border-radius:16px;width:100%;height:20%;font-size:16px}
 .setting-toggle{color:var(--text);display:block;height:100%;text-align:center;}
@@ -91,6 +90,9 @@ hr{display:block;margin-block-start:0.5em;margin-block-end:0.5em;margin-inline-s
 .setting-dropdown{color:var(--text); height: 35%; background-color: var(--bg-dark); border: var(--border) solid 2px; margin-left: 12px; border-radius: 10px;}
 .setting-dropdown > option {border: none;}
 .setting-field{color:var(--text-muted);max-width:900px;border:var(--border) solid; background:var(--bg-dark)}
+.comp-msg{margin-top:10px;min-height:20px;font-size:.95em;color:var(--text-muted)}
+.comp-bad{color:var(--danger)}
+.comp-ok{color:var(--success)}
 </style>
 </div>
 </main>
@@ -132,7 +134,29 @@ function escapeHtml(s) {
 // default page
 loadPage('general');
 
+function boolToInt(b){ return b ? 1 : 0; }
+function toastOk(t){ cmsg.textContent = t; cmsg.classList.remove('comp-bad'); cmsg.classList.add('comp-ok'); }
+function toastErr(t){ cmsg.textContent = t; cmsg.classList.remove('comp-ok'); cmsg.classList.add('comp-bad'); }
 function clearMsg(){ cmsg.textContent=''; cmsg.classList.remove('comp-ok','comp-bad'); }
+function showToast(msg) {
+  let toast = document.createElement("div");
+  toast.textContent = msg;
+  toast.style.position = "fixed";
+  toast.style.bottom = "20px";
+  toast.style.right = "20px";
+  toast.style.background = "rgba(0,0,0,0.8)";
+  toast.style.color = "#fff";
+  toast.style.padding = "10px 15px";
+  toast.style.borderRadius = "6px";
+  toast.style.zIndex = 9999;
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.transition = "opacity 0.5s";
+    toast.style.opacity = 0;
+    setTimeout(() => toast.remove(), 500);
+  }, 4000);
+}
 </script>
 </body>
 </html>

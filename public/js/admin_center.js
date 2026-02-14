@@ -123,31 +123,7 @@ async function saveSettings() {
     }
 }
 
-  
-  function toastOk(t){ cmsg.textContent = t; cmsg.classList.remove('comp-bad'); cmsg.classList.add('comp-ok'); }
-  function toastErr(t){ cmsg.textContent = t; cmsg.classList.remove('comp-ok'); cmsg.classList.add('comp-bad'); }
-  function utoastOk(t){ uMsg.textContent = t; uMsg.classList.remove('comp-bad'); uMsg.classList.add('comp-ok'); }
-  function utoastErr(t){ uMsg.textContent = t; uMsg.classList.remove('comp-ok'); uMsg.classList.add('comp-bad'); }
-  
-  function showToast(msg) {
-  let toast = document.createElement("div");
-  toast.textContent = msg;
-  toast.style.position = "fixed";
-  toast.style.bottom = "20px";
-  toast.style.right = "20px";
-  toast.style.background = "rgba(0,0,0,0.8)";
-  toast.style.color = "#fff";
-  toast.style.padding = "10px 15px";
-  toast.style.borderRadius = "6px";
-  toast.style.zIndex = 9999;
-  document.body.appendChild(toast);
 
-  setTimeout(() => {
-    toast.style.transition = "opacity 0.5s";
-    toast.style.opacity = 0;
-    setTimeout(() => toast.remove(), 500);
-  }, 4000);
-}
 
 umodal.addEventListener('click', (e) => { if (e.target.dataset.uclose) ucloseModal(); });
 uOpenBtn?.addEventListener('click', uopenModal);

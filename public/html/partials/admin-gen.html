@@ -32,40 +32,37 @@
 </label></form>
 <form style="border-radius:10px;width:calc(92% + min(4%, 28px));max-width:calc(500px + min(4%, 28px));margin:min(2%, 14px);background:var(--bg-light);"><label>
   <code style="width:100%;height: 100%;">Console</code>
-</label></form></div>
+</label></form></div><hr>
+<input class="setting-save" type="button"value="Save"onclick="saveSettings();"/>
 
 <div id=themeModal class="comp-modal hidden">
-<div class=comp-modal-backdrop></div>
+<div class=comp-modal-backdrop onclick="closeModal();"></div>
 <div class=comp-modal-card role=dialog aria-modal=true aria-labelledby=themeModalTitle>
-<div class=theme-modal-header>
+<div class=comp-modal-head>
 <h3 id=themeModalTitle>Edit Theme Colors</h3>
-<button type=button class=theme-close id=themeCloseBtn aria-label=Close>✕</button>
+<button type=button class=theme-close onclick="closeModal();" aria-label=Close>✕</button>
 </div>
 <div class=theme-modal-body>
 <p style="margin:0 0 8px">Set values for your CSS variables in your preferred encoding.</p>
 <div id=themeRows class=theme-rows></div>
-<button type=button id=addThemeRowBtn class=theme-add-row>＋ Add another</button>
+<button type=button id=addThemeRowBtn class=comp-btn-util>＋ Add another</button>
 <div id=themeMsg class=theme-msg role=status aria-live=polite></div>
 </div>
-<div class=theme-modal-footer>
-<button type=button id=themeCancelBtn class=theme-btn-secondary>Cancel</button>
-<input type=button onclick="submitTheme();"value="Save"id=themeSaveBtn class=theme-btn-primary/>
+<div class=comp-modal-footer>
+<div></div>
+<button onclick="submitTheme();"id=themeSaveBtn class=comp-btn-primary>Save</button>
 </div>
 </div>
 </div>
 
 <div id=users-modal class="comp-modal hidden">
-<div class=comp-modal-backdrop data-uclose=1></div>
+<div class=comp-modal-backdrop data-uclose=1 onclick="closeModal();"></div>
 <div class=comp-modal-card role=dialog aria-modal=true aria-labelledby=usersModalTitle>
 <div class=comp-modal-head>
 <h3 id=usersModalTitle>Users</h3>
-<button class=comp-close type=button data-uclose=1 aria-label=Close>×</button>
+<button type=button class=theme-close onclick="closeModal();" aria-label=Close>✕</button>
 </div>
 <div class=comp-modal-body>
-<div class=comp-actions style=gap:8px;display:flex>
-<button id=btn-add-user type=button>Add User</button>
-<button id=btn-save-users type=button>Save</button>
-</div>
 <div class=comp-table-wrap style=margin-top:8px>
 <table class=comp-table id=users-table>
 <thead>
@@ -80,17 +77,15 @@
 </table>
 </div>
 <div id=users-msg class=comp-msg role=status aria-live=polite></div>
-</div>
-</div>
-</div>
-</section>
+<div class=comp-modal-footer style=gap:8px;display:flex>
+<input id=btn-add-user type=button onclick="uaddRow();" value="+ Add User">
+<button id=userSaveBtn onclick="usaveAll();">Save</button></div>
+
+</div></div></div></section>
 <script>
 (() => {
   if (window.admin_generalInit) return; 
 window.admin_generalInit = async function admin_generalInit() {
-closeBtn?.addEventListener('click', closeModal);
-cancelBtn?.addEventListener('click', closeModal);
-modal?.querySelector('.comp-modal-backdrop')?.addEventListener('click', closeModal);
 addRowBtn?.addEventListener('click', () => addThemeRow());
 };
 })();
@@ -103,6 +98,7 @@ const modal = document.getElementById('themeModal');
 const closeBtn = document.getElementById('themeCloseBtn');
 const cancelBtn = document.getElementById('themeCancelBtn');
 const saveBtn = document.getElementById('themeSaveBtn');
+const uBtnSave = document.getElementById('userSaveBtn');
 const addRowBtn = document.getElementById('addThemeRowBtn');
 const rows = document.getElementById('themeRows');
 const msg = document.getElementById('themeMsg');
@@ -209,41 +205,41 @@ function openThemePopup() {
 function escToClose(e) { if (e.key === 'Escape') closeModal(); }
 
 function addThemeRow(initial = {variable: VAR_OPTIONS[0], encoding: 'hex', color: '#2a6df4', value: ''}) {
-    const row = document.createElement('div');
-    row.className = 'theme-row';
+  const row = document.createElement('div');
+  row.className = 'theme-row';
 
-    const varSel = makeVarSelect(initial.variable);
-    const encSel = makeEncodingSelect(initial.encoding);
-    const colorInput = document.createElement('input');
-    colorInput.type = 'color';
-    colorInput.value = initial.color || '#2a6df4';
+  const varSel = makeVarSelect(initial.variable);
+  const encSel = makeEncodingSelect(initial.encoding);
+  const colorInput = document.createElement('input');
+  colorInput.type = 'color';
+  colorInput.value = initial.color || '#2a6df4';
 
-    const valInput = document.createElement('input');
-    valInput.type = 'text';
-    valInput.placeholder = 'computed value…';
+const valInput = document.createElement('input');
+valInput.type = 'text';
+valInput.placeholder = 'computed value…';
 
-    const delBtn = document.createElement('button');
-    delBtn.type = 'button';
-    delBtn.className = 'theme-row-del';
-    delBtn.title = 'Remove';
-    delBtn.textContent = '−';
+const delBtn = document.createElement('button');
+delBtn.type = 'button';
+delBtn.className = 'theme-row-del';
+delBtn.title = 'Remove';
+delBtn.textContent = '−';
 
-    valInput.value = initial.value || formatValue(encSel.value, colorInput.value);
+valInput.value = initial.value || formatValue(encSel.value, colorInput.value);
 
-    colorInput.addEventListener('input', () => {
-      valInput.value = formatValue(encSel.value, colorInput.value);
-    });
-    encSel.addEventListener('change', () => {
-      valInput.value = formatValue(encSel.value, colorInput.value);
-    });
-    delBtn.addEventListener('click', () => row.remove());
+  colorInput.addEventListener('input', () => {
+    valInput.value = formatValue(encSel.value, colorInput.value);
+  });
+  encSel.addEventListener('change', () => {
+    valInput.value = formatValue(encSel.value, colorInput.value);
+  });
+  delBtn.addEventListener('click', () => row.remove());
 
-    row.appendChild(varSel);
-    row.appendChild(encSel);
-    row.appendChild(colorInput);
-    row.appendChild(valInput);
-    row.appendChild(delBtn);
-    rows.appendChild(row);
+  row.appendChild(varSel);
+  row.appendChild(encSel);
+  row.appendChild(colorInput);
+  row.appendChild(valInput);
+  row.appendChild(delBtn);
+  rows.appendChild(row);
   }
 
 async function submitTheme() {
@@ -271,7 +267,7 @@ async function submitTheme() {
       });
       if (!res.ok) throw new Error(await res.text().catch(()=>'HTTP '+res.status));
       msg.textContent = 'Theme updated successfully.'; msg.className = 'theme-msg ok';
-      setTimeout(closeThemePopup, 700);
+      setTimeout(closeModal, 700);
     } catch (e) {
       msg.textContent = 'Failed to save: ' + e.message;
       msg.className = 'theme-msg error';
@@ -326,10 +322,10 @@ function uaddRow(u = { id:null, username:'', level:5 }, isNew = true) {
   });
 
   resetBtn.addEventListener('click', async () => {
-    uclearMsg();
+    clearMsg();
     const id = Number(tr.dataset.id||0);
     const pw = tr.querySelector('.u-password').value.trim();
-    if (!id) { utoastErr('Save row first, then reset password.'); return; }
+    if (!id) { toastErr('Save row first, then reset password.'); return; }
     if (!pw) { // ask server to generate if empty
       try {
         const res = await fetch(`/local/api/users/${id}/reset-password`, {
@@ -339,23 +335,22 @@ function uaddRow(u = { id:null, username:'', level:5 }, isNew = true) {
         const data = await res.json().catch(()=> ({}));
         if (!res.ok) throw new Error(data.error || data.message || `HTTP ${res.status}`);
         tr.querySelector('.u-password').value = data.newPassword || '';
-        utoastOk('Password generated.');
-      } catch (e) { utoastErr('Reset failed: '+e.message); }
+        toastOk('Password generated.');
+      } catch (e) { toastErr('Reset failed: '+e.message); }
       return;
     }
-    // explicit new password
     try {
       const res = await fetch(`/local/api/users/${id}/reset-password`, {
         method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
         body: JSON.stringify({ newPassword: pw })
       });
       if (!res.ok) throw new Error(await res.text().catch(()=>`HTTP ${res.status}`));
-      utoastOk('Password updated.');
-    } catch (e) { utoastErr('Reset failed: '+e.message); }
+      toastOk('Password updated.');
+    } catch (e) { toastErr('Reset failed: '+e.message); }
   });
 
   delBtn.addEventListener('click', async () => {
-    uclearMsg();
+    clearMsg();
     if (tr.dataset.new === '1') { tr.remove(); return; }
     const id = Number(tr.dataset.id||0);
     if (!id) return;
@@ -364,8 +359,8 @@ function uaddRow(u = { id:null, username:'', level:5 }, isNew = true) {
       const res = await fetch(`/local/api/users/${id}`, { method:'DELETE', credentials:'include' });
       if (!res.ok) throw new Error(await res.text().catch(()=>`HTTP ${res.status}`));
       tr.remove();
-      utoastOk('User deleted.');
-    } catch (e) { utoastErr('Delete failed: '+e.message); }
+      toastOk('User deleted.');
+    } catch (e) { toastErr('Delete failed: '+e.message); }
   });
 
   uTbody.appendChild(tr);
@@ -382,12 +377,12 @@ async function uloadUsers() {
       list.forEach(u => uaddRow({ id:u.id, username:u.username, level: u.level }, false));
     }
   } catch (e) {
-    utoastErr(e.message);
+    toastErr(e.message);
   }
 }
 
 async function usaveAll() {
-  uclearMsg();
+  clearMsg();
   uBtnSave.disabled = true;
   try {
     const rows = Array.from(uTbody.querySelectorAll('tr'));
@@ -442,10 +437,10 @@ async function usaveAll() {
         }
       }
     }
-    utoastOk('All users saved.');
+    toastOk('All users saved.');
     await uloadUsers();
   } catch (e) {
-    utoastErr(e.message);
+  toastErr(e.message);
   } finally {
     uBtnSave.disabled = false;
   }
@@ -454,35 +449,23 @@ async function usaveAll() {
 <style>
 .hidden{display:none;}
 .comp-modal {position:fixed;inset:0;z-index:1000;}
-.comp-modal-backdrop{position:absolute;inset:0;background:var(--bg); }
-.comp-modal-card{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#121212;color:var(--text);width:min(92vw,760px);border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+.comp-modal-backdrop{position:absolute;inset:0;}
+.comp-modal-card{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg-light);color:var(--text);width:min(92vw,760px);border-radius:12px;box-shadow:0 10px 40px var(--border-muted)}
+.comp-modal-head,.comp-modal-footer{display:flex;align-items:center;justify-content:space-between;border-bottom:1pxsolid var(--border-muted);padding:8px 12px;}
+.comp-modal-body {padding:12px;}
+.comp-btn-util{margin-top:6px;border:1px dashed var(--border);background:0 0;color:var(--text-muted);padding:6px 10px;border-radius:8px;cursor:pointer}
+.comp-btn-primary{padding:8px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--primary);color:var(--text);}
 
-.theme-modal-footer,.theme-modal-header{padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
-.theme-modal-body{padding:0 16px 16px}.theme-close{background:0 0;border:0;color:#aaa;font-size:18px;cursor:pointer}
+.theme-modal-body{padding:0 16px 16px}.theme-close{background:0 0;border:0;color:var(--text);font-size:18px;cursor:pointer}
 .theme-rows{display:grid;gap:10px;margin:8px 0}.theme-row{display:grid;grid-template-columns:1.2fr 1fr 130px 1.6fr auto;gap:8px;align-items:center}
 .theme-row input[type=color],.theme-row input[type=text],
-.theme-row select{width:100%;padding:8px;border-radius:8px;border:1px solid #333;background:#1b1b1b;color:var(--text)}
+.theme-row select{width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text)}
 .theme-row input[type=color]{padding:0;height:40px}
-.theme-row-del{padding:0 10px;border-radius:8px;border:1px solid #333;background:#1b1b1b;color:var(--text);cursor:pointer;height:40px}
-.theme-add-row{margin-top:6px;border:1px dashed var(--border);background:0 0;color:var(--text-muted);padding:6px 10px;border-radius:8px;cursor:pointer}
-.theme-btn-primary,.theme-btn-secondary{padding:8px 12px;border-radius:8px;border:1px solid #333;cursor:pointer}
-.theme-btn-secondary{background:var(--secondary);color:var(--text-muted)}
-.theme-btn-primary{background:var(--primary);color:var(--text);border-color:var(--border)}
-.theme-msg{margin-top:10px;min-height:20px;font-size:.95em;color:var(--text-muted)}
-.theme-msg.error{color:var(--danger)}
-.theme-msg.ok{color:var(--success)}
+.theme-row-del{padding:0 10px;border-radius:8px;border:1px solid var(--border);background:#1b1b1b;color:var(--text);cursor:pointer;height:40px}
 
-
-
-.comp-modal-head { display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #333; padding:8px 12px; }
-.comp-modal-body { padding: 12px; }
-.comp-close { font-size: 20px; line-height: 1; background: transparent; color: #eee; border: 0; cursor: pointer; }
-.comp-actions { display:flex; gap: 8px; margin-bottom: 10px; }
-.comp-table-wrap { max-height: 60vh; overflow:auto; border:1px solid #333; border-radius: 8px; }
-.comp-table { width: 100%; border-collapse: collapse; }
-.comp-table th, .comp-table td { border-bottom:1px solid #222; padding: 8px; }
-.comp-table input[type="text"] { width: 100%; }
-.comp-msg { margin-top: 8px; min-height: 20px; }
-.comp-bad { color: #ff6b6b; }
-.comp-ok { color: #63e6be; }
+.comp-actions{display:flex;gap:8px;margin-bottom:10px;}
+.comp-table-wrap{max-height:60vh;overflow:auto;border:1px solid var(--border);border-radius:8px;}
+.comp-table{width:100%;border-collapse:collapse;}
+.comp-table th,.comp-table td{border-bottom:1px solid var(--border-muted);padding:8px}
+.comp-table input[type="text"]{width:100%}
 </style>
