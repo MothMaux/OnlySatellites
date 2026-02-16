@@ -16,7 +16,7 @@
 </label></form>
 <form class="setting-card"action="configure-about"><label>
   <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="80%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-article"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 6a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2l0 -12" /><path d="M7 8h10" /><path d="M7 12h10" /><path d="M7 16h10" /></svg>
-  <input type="button"class="setting-button"value="Edit About Page"onclick="copenModal();"/>
+  <input type="button"class="setting-button"value="Edit About Page"/>
 </label></form></div>
 <label class="setting-row">
   <svg xmlns="http://www.w3.org/2000/svg" height="100%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-brand-speedtest"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5.636 19.364a9 9 0 1 1 12.728 0" /><path d="M16 9l-4 4" /></svg>
@@ -34,7 +34,6 @@
   <code style="width:100%;height: 100%;">Console</code>
 </label></form></div><hr>
 <input class="setting-save" type="button"value="Save"onclick="saveSettings();"/>
-
 <div id=themeModal class="comp-modal hidden">
 <div class=comp-modal-backdrop onclick="closeModal();"></div>
 <div class=comp-modal-card role=dialog aria-modal=true aria-labelledby=themeModalTitle>
@@ -45,8 +44,7 @@
 <div class=theme-modal-body>
 <p style="margin:0 0 8px">Set values for your CSS variables in your preferred encoding.</p>
 <div id=themeRows class=theme-rows></div>
-<button type=button id=addThemeRowBtn class=comp-btn-util>＋ Add another</button>
-<div id=themeMsg class=theme-msg role=status aria-live=polite></div>
+<button type=button id=addThemeRowBtn class=comp-btn-util onclick="addThemeRow();">＋ Add another</button>
 </div>
 <div class=comp-modal-footer>
 <div></div>
@@ -54,7 +52,6 @@
 </div>
 </div>
 </div>
-
 <div id=users-modal class="comp-modal hidden">
 <div class=comp-modal-backdrop data-uclose=1 onclick="closeModal();"></div>
 <div class=comp-modal-card role=dialog aria-modal=true aria-labelledby=usersModalTitle>
@@ -76,17 +73,14 @@
 <tbody></tbody>
 </table>
 </div>
-<div id=users-msg class=comp-msg role=status aria-live=polite></div>
 <div class=comp-modal-footer style=gap:8px;display:flex>
 <input id=btn-add-user type=button onclick="uaddRow();" value="+ Add User">
 <button id=userSaveBtn onclick="usaveAll();">Save</button></div>
-
 </div></div></div></section>
 <script>
 (() => {
   if (window.admin_generalInit) return; 
 window.admin_generalInit = async function admin_generalInit() {
-addRowBtn?.addEventListener('click', () => addThemeRow());
 };
 })();
 const VAR_OPTIONS = [
@@ -94,18 +88,7 @@ const VAR_OPTIONS = [
     'danger','highlight','info','primary','secondary',
     'success','text','text-muted','warning' ];
 const ENCODINGS = ['hex', 'rgb', 'hsl', 'oklch'];
-const modal = document.getElementById('themeModal');
-const closeBtn = document.getElementById('themeCloseBtn');
-const cancelBtn = document.getElementById('themeCancelBtn');
-const saveBtn = document.getElementById('themeSaveBtn');
-const uBtnSave = document.getElementById('userSaveBtn');
-const addRowBtn = document.getElementById('addThemeRowBtn');
-const rows = document.getElementById('themeRows');
-const msg = document.getElementById('themeMsg');
 const hwSelect = document.getElementById('hwmonitor');
-const cmsg = document.getElementById('users-msg');
-const umodal = document.getElementById('users-modal');
-const uTbody = document.querySelector('#users-table tbody');
 function hexToRgb(hex) {
     const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     if (!m) return null;
@@ -170,15 +153,15 @@ function formatValue(enc, hex) {
   }
 
 function makeVarSelect(selected = '') {
-    const sel = document.createElement('select');
-    VAR_OPTIONS.forEach(v => {
-      const opt = document.createElement('option');
-      opt.value = v; opt.textContent = v;
-      if (v === selected) opt.selected = true;
-      sel.appendChild(opt);
-    });
-    return sel;
-  }
+  const sel = document.createElement('select');
+  VAR_OPTIONS.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v; opt.textContent = v;
+    if (v === selected) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  return sel;
+}
 
 function makeEncodingSelect(selected = 'hex') {
     const sel = document.createElement('select');
@@ -192,19 +175,20 @@ function makeEncodingSelect(selected = 'hex') {
   }
 
 function openThemePopup() {
-    msg.textContent = '';
-    msg.className = 'theme-msg';
-    modal.classList.remove('hidden');
-    if (!rows.children.length) {
-      addThemeRow();
-    }
-    const firstInput = rows.querySelector('select, input');
-    if (firstInput) firstInput.focus();
-    document.addEventListener('keydown', escToClose);
+  const rows = document.getElementById('themeRows');
+  const modal = document.getElementById('themeModal');
+  modal.classList.remove('hidden');
+  if (!rows.children.length) {
+    addThemeRow();
   }
+  const firstInput = rows.querySelector('select, input');
+  if (firstInput) firstInput.focus();
+  document.addEventListener('keydown', escToClose);
+}
 function escToClose(e) { if (e.key === 'Escape') closeModal(); }
 
 function addThemeRow(initial = {variable: VAR_OPTIONS[0], encoding: 'hex', color: '#2a6df4', value: ''}) {
+  const rows = document.getElementById('themeRows');
   const row = document.createElement('div');
   row.className = 'theme-row';
 
@@ -243,6 +227,8 @@ valInput.value = initial.value || formatValue(encSel.value, colorInput.value);
   }
 
 async function submitTheme() {
+  const rows = document.getElementById('themeRows');
+  const saveBtn = document.getElementById('themeSaveBtn');
     const payload = {};
     for (const row of rows.querySelectorAll('.theme-row')) {
       const varName = row.querySelector('select')?.value;
@@ -251,13 +237,12 @@ async function submitTheme() {
     }
     const keys = Object.keys(payload);
     if (!keys.length) {
-      msg.textContent = 'Please add at least one variable/value.';
-      msg.className = 'theme-msg error';
+      showToast('Please add at least one variable/value.', 1);
       return;
     }
 
     saveBtn.disabled = true;
-    msg.textContent = 'Saving…'; msg.className = 'theme-msg';
+    showToast('Saving…',0);
     try {
       const res = await fetch('/api/config/theme', {
         method: 'POST',
@@ -266,29 +251,32 @@ async function submitTheme() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(await res.text().catch(()=>'HTTP '+res.status));
-      msg.textContent = 'Theme updated successfully.'; msg.className = 'theme-msg ok';
+      showToast('Theme updated successfully.', 0);
       setTimeout(closeModal, 700);
     } catch (e) {
-      msg.textContent = 'Failed to save: ' + e.message;
-      msg.className = 'theme-msg error';
+      showToast('Failed to save: ' + e.message,1);
     } finally {
       saveBtn.disabled = false;
     }
   }
 
 async function uopenModal() {
-  clearMsg();
+  const umodal = document.getElementById('users-modal');
   umodal.classList.remove('hidden');
   document.addEventListener('keydown', escToClose);
   await uloadUsers();
 }
 function closeModal() {
+  const uTbody = document.querySelector('#users-table tbody');
+  const modal = document.getElementById('themeModal');
+  const umodal = document.getElementById('users-modal');
   umodal.classList.add('hidden');
   modal.classList.add('hidden');
   uTbody.innerHTML = '';
   document.removeEventListener('keydown', escToClose);
 }
 function uaddRow(u = { id:null, username:'', level:5 }, isNew = true) {
+  const uTbody = document.querySelector('#users-table tbody');
   const tr = document.createElement('tr');
   tr.dataset.new = isNew ? '1' : '0';
   tr.dataset.id  = u.id ?? '';
@@ -309,23 +297,19 @@ function uaddRow(u = { id:null, username:'', level:5 }, isNew = true) {
       <button type="button" class="u-del" ${isNew?'disabled':''} title="Delete">Delete</button>
     </td>
   `;
-
-  // Wire buttons
   const genBtn   = tr.querySelector('.u-gen');
   const resetBtn = tr.querySelector('.u-reset');
   const delBtn   = tr.querySelector('.u-del');
 
   genBtn.addEventListener('click', () => {
-    // client-side random; server will hash on reset
     const pw = Math.random().toString(36).slice(-10) + '!';
     tr.querySelector('.u-password').value = pw;
   });
 
   resetBtn.addEventListener('click', async () => {
-    clearMsg();
     const id = Number(tr.dataset.id||0);
     const pw = tr.querySelector('.u-password').value.trim();
-    if (!id) { toastErr('Save row first, then reset password.'); return; }
+    if (!id) { showToast('Save row first, then reset password.', 1); return; }
     if (!pw) { // ask server to generate if empty
       try {
         const res = await fetch(`/local/api/users/${id}/reset-password`, {
@@ -335,8 +319,8 @@ function uaddRow(u = { id:null, username:'', level:5 }, isNew = true) {
         const data = await res.json().catch(()=> ({}));
         if (!res.ok) throw new Error(data.error || data.message || `HTTP ${res.status}`);
         tr.querySelector('.u-password').value = data.newPassword || '';
-        toastOk('Password generated.');
-      } catch (e) { toastErr('Reset failed: '+e.message); }
+        showToast('Password generated.', 0);
+      } catch (e) { showToast('Reset failed: '+e.message, 1); }
       return;
     }
     try {
@@ -345,12 +329,11 @@ function uaddRow(u = { id:null, username:'', level:5 }, isNew = true) {
         body: JSON.stringify({ newPassword: pw })
       });
       if (!res.ok) throw new Error(await res.text().catch(()=>`HTTP ${res.status}`));
-      toastOk('Password updated.');
-    } catch (e) { toastErr('Reset failed: '+e.message); }
+      showToast('Password updated.', 0);
+    } catch (e) { showToast('Reset failed: '+e.message, 1); }
   });
 
   delBtn.addEventListener('click', async () => {
-    clearMsg();
     if (tr.dataset.new === '1') { tr.remove(); return; }
     const id = Number(tr.dataset.id||0);
     if (!id) return;
@@ -359,14 +342,15 @@ function uaddRow(u = { id:null, username:'', level:5 }, isNew = true) {
       const res = await fetch(`/local/api/users/${id}`, { method:'DELETE', credentials:'include' });
       if (!res.ok) throw new Error(await res.text().catch(()=>`HTTP ${res.status}`));
       tr.remove();
-      toastOk('User deleted.');
-    } catch (e) { toastErr('Delete failed: '+e.message); }
+      showToast('User deleted.', 0);
+    } catch (e) { showToast('Delete failed: '+e.message,1); }
   });
 
   uTbody.appendChild(tr);
 }
 
 async function uloadUsers() {
+  const uTbody = document.querySelector('#users-table tbody');
   uTbody.innerHTML = '';
   try {
     const res = await fetch('/local/api/users', { credentials:'include' });
@@ -377,12 +361,14 @@ async function uloadUsers() {
       list.forEach(u => uaddRow({ id:u.id, username:u.username, level: u.level }, false));
     }
   } catch (e) {
-    toastErr(e.message);
+    showToast(e.message, 1);
   }
 }
 
 async function usaveAll() {
-  clearMsg();
+  const uTbody = document.querySelector('#users-table tbody');
+  const rows = document.getElementById('themeRows');
+  const uBtnSave = document.getElementById('userSaveBtn');
   uBtnSave.disabled = true;
   try {
     const rows = Array.from(uTbody.querySelectorAll('tr'));
@@ -437,10 +423,10 @@ async function usaveAll() {
         }
       }
     }
-    toastOk('All users saved.');
+    showToast('All users saved.', 0);
     await uloadUsers();
   } catch (e) {
-  toastErr(e.message);
+  showToast(e.message, 1);
   } finally {
     uBtnSave.disabled = false;
   }

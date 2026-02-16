@@ -12,11 +12,11 @@ Satdump instances
 </div><hr>
 <div id=satdump-rows></div>
 <div style=display:flex;gap:8px;margin-top:8px>
-<button style="color:var(--text);background:var(--bg-light);border:none;border-radius:12px;width:100%;padding:16px 12px;margin-top:6px;cursor:pointer" type=button id=satdump-add>
+<button onclick="makeInstanceRow();" style="color:var(--text);background:var(--bg-light);border:none;border-radius:12px;width:100%;padding:16px 12px;margin-top:6px;cursor:pointer" type=button id=satdump-add>
   + Add instance</button>
 </div>
 <hr>
-<button class="setting-save" type=button id=satdump-save>Save instances</button>
+<button class="setting-save" type=button id=satdump-save onclick="saveSatdump">Save instances</button>
 </div>
 </section>
 <script>
@@ -25,18 +25,15 @@ if (window.admin_satdumpInit) return;
 window.admin_satdumpInit = async function admin_satdumpInit() {
 loadSatdumpList();
 };})();
-const satRateInput = document.getElementById('satdump-rate');
-const satSpanInput    = document.getElementById('satdump-span');
-const rowsEl = document.getElementById('satdump-rows');
-const addBtn = document.getElementById('satdump-add');
-const saveSatdumpBtn = document.getElementById('satdump-save');
-let satdumpOriginalNames = new Set();
 
-function clearInstanceRows() {
+
+function clearInstanceRows() { 
+  const rowsEl = document.getElementById('satdump-rows');
   rowsEl.innerHTML = '';
 }
 
 function makeInstanceRow(name = '', address = '', port = '', log = '', isNew = true) {
+  const rowsEl = document.getElementById('satdump-rows');
   const row = document.createElement('div');
   row.className = 'row';
   row.dataset.new = isNew ? '1' : '0';
@@ -55,7 +52,7 @@ function makeInstanceRow(name = '', address = '', port = '', log = '', isNew = t
 }
 
 async function loadSatdumpList() {
-  satdumpOriginalNames = new Set();
+  let satdumpOriginalNames = new Set();
   clearInstanceRows();
   try {
     const res = await fetch('/local/api/satdump', { credentials: 'include' });
@@ -77,6 +74,8 @@ async function loadSatdumpList() {
 }
 
 async function saveSatdump() {
+  const rowsEl = document.getElementById('satdump-rows');
+  const saveSatdumpBtn = document.getElementById('satdump-save');
   saveSatdumpBtn.disabled = true;
   showToast("Saving Satdump…");
 
@@ -148,9 +147,6 @@ async function saveSatdump() {
     saveSatdumpBtn.disabled = false;
   }
 }
-
-addBtn?.addEventListener('click', () => makeInstanceRow());
-saveSatdumpBtn?.addEventListener('click', saveSatdump);
 </script>
 <style>
 .row{display:grid;grid-template-columns:calc(35% - 10px) calc(35% - 5px) calc(20% - 5px) calc(10% - 5px) 25px;margin:8px;font-weight:600;}

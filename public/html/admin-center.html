@@ -110,9 +110,19 @@ async function loadPage(name) {
   root.innerHTML = await res.text();
 
   root.querySelectorAll("script").forEach(old => {
+    const id = name;
+
+    if (loadedScripts.has(id)) {
+      old.remove();
+      return;
+    }
+
+    loadedScripts.add(id);
+
     const s = document.createElement("script");
     s.textContent = old.textContent;
-    old.replaceWith(s);
+    document.body.appendChild(s); // append once globally
+    old.remove();
   });
 
   const fn = window[`admin_${name}Init`];
@@ -135,10 +145,7 @@ function escapeHtml(s) {
 loadPage('general');
 
 function boolToInt(b){ return b ? 1 : 0; }
-function toastOk(t){ cmsg.textContent = t; cmsg.classList.remove('comp-bad'); cmsg.classList.add('comp-ok'); }
-function toastErr(t){ cmsg.textContent = t; cmsg.classList.remove('comp-ok'); cmsg.classList.add('comp-bad'); }
-function clearMsg(){ cmsg.textContent=''; cmsg.classList.remove('comp-ok','comp-bad'); }
-function showToast(msg) {
+function showToast(msg, err) {
   let toast = document.createElement("div");
   toast.textContent = msg;
   toast.style.position = "fixed";
@@ -149,6 +156,11 @@ function showToast(msg) {
   toast.style.padding = "10px 15px";
   toast.style.borderRadius = "6px";
   toast.style.zIndex = 9999;
+  if (err == 0) {
+    toast.classList.remove('comp-bad'); toast.classList.add('comp-ok');
+  } else {
+    toast.classList.remove('comp-ok'); toast.classList.add('comp-bad');
+  }
   document.body.appendChild(toast);
 
   setTimeout(() => {
