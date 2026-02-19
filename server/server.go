@@ -125,6 +125,14 @@ func (s *Server) mustSubHTMLFS() fs.FS {
 	return htmlFS
 }
 
+func (s *Server) mustSubPFS() fs.FS {
+	htmlFS, err := fs.Sub(s.cfg.EmbeddedFS, "public/html/partials")
+	if err != nil {
+		log.Fatal("Failed to create HTML filesystem:", err)
+	}
+	return htmlFS
+}
+
 func (s *Server) serveEmbeddedHTML(name string, htmlFS fs.FS) http.HandlerFunc {
 	t := template.Must(template.New(name).ParseFS(htmlFS, name))
 	return func(w http.ResponseWriter, r *http.Request) {

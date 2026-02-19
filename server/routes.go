@@ -44,6 +44,7 @@ func (s *Server) setupUpdateRoutes(r *mux.Router) {
 
 func (s *Server) setupMiscRoutes(r *mux.Router) {
 	htmlFS := s.mustSubHTMLFS()
+	partialFS := s.mustSubPFS()
 
 	// Settings handler
 	settings := &handlers.SettingsHandler{Store: s.cfg.LocalStore}
@@ -69,6 +70,12 @@ func (s *Server) setupMiscRoutes(r *mux.Router) {
 	r.Handle("/colors.css", &handlers.ColorsCSSHandler{Store: s.cfg.LocalStore})
 	r.Handle("/local/stats", s.requireAuth(3, s.serveEmbeddedHTML("stats.html", htmlFS))).Methods("GET")
 	r.Handle("/local/admin", s.requireAuth(1, s.serveEmbeddedHTML("admin-center.html", htmlFS))).Methods("GET")
+	r.Handle("/local/admin/general", s.requireAuth(1, s.serveEmbeddedHTML("admin-gen.html", partialFS))).Methods("GET")
+	r.Handle("/local/admin/net", s.requireAuth(1, s.serveEmbeddedHTML("admin-net.html", partialFS))).Methods("GET")
+	r.Handle("/local/admin/storage", s.requireAuth(1, s.serveEmbeddedHTML("admin-stg.html", partialFS))).Methods("GET")
+	r.Handle("/local/admin/satdump", s.requireAuth(1, s.serveEmbeddedHTML("admin-sat.html", partialFS))).Methods("GET")
+	r.Handle("/local/admin/passes", s.requireAuth(1, s.serveEmbeddedHTML("admin-pss.html", partialFS))).Methods("GET")
+	r.Handle("/local/admin/images", s.requireAuth(1, s.serveEmbeddedHTML("admin-img.html", partialFS))).Methods("GET")
 	r.Handle("/local/api/disk-stats", s.requireAuth(3, http.HandlerFunc(handlers.ServeDiskStats(s.cfg.AppConfig.Paths.LiveOutputDir)))).Methods("GET")
 	r.Handle("/local/api/rotate-pass", s.requireAuth(3, http.HandlerFunc(handlers.ServeRotatePass180(s.cfg.AppConfig.Paths.LiveOutputDir, s.cfg.AppConfig.Paths.ThumbnailDir)))).Methods("POST")
 
