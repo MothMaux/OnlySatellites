@@ -4,7 +4,6 @@
 <meta charset=UTF-8>
 <title>OnlySats Admin</title>
 <link rel="icon" href="/img/OnlySats_Logo.svg" type="image/x-icon">
-<link rel=stylesheet href=../css/home.css>
 </head>
 <body>
 <div class=navbar>
@@ -12,7 +11,6 @@
 <a href=../gallery>Gallery</a>
 <a href=../about>About Station</a>
 <a href=login>Log In</a>
-<button id=openThemeBtn type=button style=background:inherit;border:none;padding:6px>🎨</button>
 <div class=dropdown>
 <button class=dropbtn>☰</button>
 <div class=dropdown-content>
@@ -22,197 +20,156 @@
 </div>
 </div>
 </div>
-<section class=card id=settings-root style="max-width:900px;margin:24px auto;padding:16px;border:1px solid #ddd;border-radius:12px">
-<h2 style=display:flex;align-items:center;gap:.5rem>
-Settings
-<small id=settings-status style=color:#888;font-weight:400></small>
-</h2>
-<h3 style=display:flex;align-items:center;gap:.5rem>
-General station settings
-<span class=info title="set what visitors see on your page or create logins for your friends">ⓘ</span>
-</h3>
-<button id=btn-open-users type=button>Manage Users</button>
-<form action="configure-about">
-  <input type="submit" value="Edit About Page"/>
-</form>
-<form action="messages-admin">
-  <input type="submit" value="Create a Post"/>
-</form>
-<h3 style=display:flex;align-items:center;gap:.5rem>
-Images
-<span class=info title="Set composite names for what the filename will appear as.\nDisabling a composite will make it non-viewable in the gallery">ⓘ</span>
-</h3>
-<button id=btn-open-composites type=button>Manage Composites</button>
-<form action="configure-passes">
-  <input type="submit" value="Configure Passes"/>
-</form>
-<button id="repopulateBtn" class="btn btn-warning">Repopulate .DB</button>
-<hr style="margin:20px 0">
-<div>
-  <h3 style="display:flex;align-items:center;gap:.5rem">
-    Rate Limiting
-    <span class="info" title="Set network request limits/defaults">ⓘ</span>
-  </h3>
-  <div style="display:flex;align-items:center;gap:.5rem;margin-top:10px">
-    <label for="update-cd" style="min-width:260px">Update cooldown</label>
-    <input id="update-cd" type="number" min="0" step="1" value="0" style="width:140px">
-    <span style="color:#666"><b>s</b></span>
-  </div>
-  <div style="display:flex;align-items:center;gap:.5rem;margin-top:10px">
-    <label for="pass-limit" style="min-width:260px">Display limit</label>
-    <input id="pass-limit" type="number" min="0" step="1" value="0" style="width:140px">
-    <span style="color:#666"><b>passes</b></span>
-  </div>
-  <div style="display:flex;align-items:center;gap:.5rem;margin-top:10px">
-    <label for="satdump-rate" style="min-width:260px">Satdump graph polling rate</label>
-    <input id="satdump-rate" type="number" min="0" step="1" value="0" style="width:140px">
-    <span style="color:#666"><b>ms</b></span>
-  </div>
-  <div style="display:flex;align-items:center;gap:.5rem;margin-top:10px">
-    <label for="satdump-span" style="min-width:260px">Satdump graph span</label>
-    <input id="satdump-span" type="number" min="0" step="1" value="0" style="width:140px">
-    <span style="color:#666"><b>s</b></span>
-  </div>
+<div class="admin-layout">
+    <aside class="admin-sidebar">
+      <button data-page="general" class="active">General</button>
+      <button data-page="net">Network</button>
+      <button data-page="storage">Files</button>
+      <button data-page="satdump">Satdump</button>
+      <button data-page="passes">Passes</button>
+      <button data-page="images">Images</button>
+    </aside>
+
+    <main id="admin-content">
+      <div id="admin-page-root"style=margin:10px></div>
+<style>
+:root {
+--bg:oklch(0.15 0.075 301);
+--bg-dark:oklch(0.1 0.075 301);
+--bg-light:oklch(0.2 0.075 301);
+--border:oklch(0.4 0.15 301);
+--border-muted:oklch(0.3 0.15 301);
+--danger:oklch(0.7 0.15 30);
+--highlight:oklch(0.5 0.15 301);
+--info:oklch(0.8 0.15 260);
+--primary:oklch(0.76 0.15 301);
+--secondary:oklch(.65 0.13 240);
+--success:oklch(0.7 0.15 160);
+--text:oklch(0.96 0.1 301);
+--text-muted:oklch(0.76 0.1 301);
+--warning:oklch(0.7 0.15 80);
+}
+body{background-color:var(--bg); font-family:sans-serif;margin:0;padding:0}
+h3{display:flex;align-items:center;gap:.5rem}
+.navbar{background-color:var(--bg-light);overflow:hidden;width:100%}
+.navbar a{align-content:center;color:var(--text);float:left;font-size:17px;height:34px;
+  overflow:hidden;padding:0;text-align:center;text-decoration:none;width:20%}
+.navbar a.active{background-color:var(--bg-dark);color:var(--text-muted)}
+@media screen and (max-width:525px){ 
+  .navbar a {display:block;float:none;text-align:left;width:100% }
+  .msg__title { padding: 14px 16px 0 14px;}}
+#container { display:flex; gap:2rem; padding:1rem }
+#admin-center-stats { color:var(--text) }
+#text-panel { background:var(--highlight); border:1px solid var(--border-muted); border-radius:.5rem; color:var(--text);
+  font-family:monospace; padding:1rem; white-space:pre-wrap; width:60% }
+.dropdown { float:right; overflow:hidden }
+.dropdown .dropbtn { background-color:inherit; border:none; color:var(--text); font-family:inherit; font-size:16px;
+  height:34px; margin:0; outline:none; width:40px }
+.navbar a:hover,.dropdown:hover .dropbtn { background-color:var(--highlight) }
+.dropdown-content { background-color:var(--bg); box-shadow:0 8px 16px 0 var(--border); display:none; position:absolute; right:6px; width:100px; z-index:1 }
+.dropdown-content a { background-color:var(--bg-light); color:var(--text); display:block; float:left; padding-right:6px;
+  text-align:right; text-decoration:none; width:100% }
+.dropdown-content a:hover { background-color:var(--highlight); border-width:1px }
+.dropdown:hover .dropdown-content { display:block }
+.hidden {display:none;}
+hr{display:block;margin-block-start:0.5em;margin-block-end:0.5em;margin-inline-start:auto;margin-inline-end:auto;border:var(--border);unicode-bidi: isolate;
+  overflow:hidden;border-style:inset;border-width:1px;margin:20px;}
+.info{cursor:help;color:var(--text-muted);border:1px solid var(--border);border-radius:50%;width:1.1em;height:1.1em;display:inline-flex;align-items:center;justify-content:center;font-size:.85em;user-select:none}
+.card{color:var(--text)}
+.admin-layout {display:grid;grid-template-columns:minmax(100px, 17%) minmax(0px, calc(100% - 17%));height:calc(100vh - 34px);}
+.admin-sidebar{background:var(--bg-dark);color:var(--text-muted);padding:12px;border-right:1px solid var(--border-muted);}
+.admin-sidebar button{background:none;border:none;padding:12px 10px;text-align:center;border-radius:12px;cursor:pointer;width:100%;color:var(--text);margin-top:6px;font-size:16px;}
+.admin-sidebar button.active, .admin-sidebar button:hover{background:var(--bg-light);color:var(--text);font-weight:700;}
+.setting-save{color:var(--text);background:var(--bg-light);border:none;border-radius:12px;width:100%;padding:16px 12px;margin-top:6px;cursor:pointer}
+.setting-save:hover{background:var(--highlight);color:var(--text);font-size:20px;}
+.setting-card {border-radius:10px;width:46%;max-width:250px;margin:min(2%, 14px);aspect-ratio:1;background:var(--bg-light);}
+.setting-button {color:var(--text);background:var(--bg-light);border:none;border-radius:16px;width:100%;height:20%;font-size:16px}
+.setting-toggle{color:var(--text);display:block;height:100%;text-align:center;}
+.setting-toggle input:checked + svg {stroke:var(--success);}
+.setting-row{height:86px;width:100%;align-items:center;display:grid;grid-template-columns:86px 100px calc(100% - 236px) minmax(0px, 20px)}
+.setting-dropdown{color:var(--text); height: 35%; background-color: var(--bg-dark); border: var(--border) solid 2px; margin-left: 12px; border-radius: 10px;}
+.setting-dropdown > option {border: none;}
+.setting-field{color:var(--text-muted);max-width:900px;border:var(--border) solid; background:var(--bg-dark)}
+.disabled{color: var(--danger);}
+.comp-msg{margin-top:10px;min-height:20px;font-size:.95em;color:var(--text-muted)}
+.comp-bad{color:var(--danger)}
+.comp-ok{color:var(--success)}
+</style>
 </div>
-<div>
-<h3 style=display:flex;align-items:center;gap:.5rem>
-Hardware monitoring
-<span class=info title="Choose how to collect host metrics. HWiNFO requires its local server enabled on Windows; Native uses built-in methods.">ⓘ</span>
-</h3>
-<select id=hwmonitor style=margin-top:8px;min-width:220px>
-<option value=off>Off</option>
-<option value=hwinfo>HWiNFO</option>
-<option value=native>Native</option>
-</select>
-</div>
-<hr style="margin:20px 0">
-<div>
-<h3 style=display:flex;align-items:center;gap:.5rem>
-Archiving
-<span class=info title="If enabled, passes older than the span are archived; you can optionally force retention of archived data. Clean-up deletes passes permanently after the specified days.">ⓘ</span>
-</h3>
-<label style=display:flex;align-items:center;gap:.5rem;margin-top:8px>
-<input type=checkbox id=archive-active>
-Enable archiving
-</label>
-<div id=archive-advanced style="margin-top:10px;padding-left:10px;border-left:3px solid #eee;display:none">
-<div style=display:flex;align-items:center;gap:.5rem;margin-top:8px>
-<label for=archive-span style=min-width:240px>Archive passes after (days)</label>
-<input id=archive-span type=number min=1 step=1 value=60 style=width:120px>
-</div>
-</div>
-<div style=display:flex;align-items:center;gap:.5rem;margin-top:12px>
-<label for=archive-clean style=min-width:240px>Delete passes after (days)</label>
-<input id=archive-clean type=number min=0 step=1 value=0 style=width:120px>
-<span style=color:#666>(0 = never delete)</span>
-</div>
-</div>
-<hr style="margin:20px 0">
-<div style=display:flex;gap:8px;justify-content:flex-end>
-<button type=button id=settings-save>Save settings</button>
-</div>
-<div style=margin-top:16px>
-<h3 style=display:flex;align-items:center;gap:.5rem>
-Satdump instances
-<span class=info title="Add one or more Satdump http servers to proxy.">ⓘ</span>
-</h3>
-<div style="display:grid;grid-template-columns:1.4fr 1.4fr 140px 140px 40px;gap:8px;align-items:center;font-weight:600;opacity:.8">
-<div>Name</div>
-<div>Address (optional)</div>
-<div>Port</div>
-<div>Enable logging</div>
-<div></div>
-</div>
-<div id=satdump-rows style=display:grid;gap:8px;margin-top:8px></div>
-<div style=display:flex;gap:8px;margin-top:8px>
-<button type=button id=satdump-add>+ Add instance</button>
-<button type=button id=satdump-save>Save instances</button>
-</div>
-</div>
-</section>
-<div id=admin-center-stats style="max-width:900px;margin:24px auto;padding:16px;border:1px solid #ddd;border-radius:12px">
-<p>Loading stats...</p>
-</div>
-<div>
-<div id=composites-modal class="comp-modal hidden" aria-hidden=true>
-<div class=comp-modal-backdrop data-close=1></div>
-<div class=comp-modal-card>
-<div class=comp-modal-head>
-<h3>Composites</h3>
-<button class=comp-close type=button data-close=1 aria-label=Close>×</button>
-</div>
-<div class=comp-modal-body>
-<div class=comp-actions>
-<button id=btn-add-composite type=button>Add Composite</button>
-<button id=btn-save-composites type=button>Save</button>
-</div>
-<div class=comp-table-wrap>
-<table class=comp-table id=composites-table>
-<thead>
-<tr>
-<th style=width:30%>Key</th>
-<th style=width:50%>Name</th>
-<th style=width:10%>Enabled</th>
-<th style=width:10%>Actions</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
-</div>
-<div id=comp-msg class=comp-msg role=status aria-live=polite></div>
-</div>
-</div>
-</div>
-<div id=themeModal class=theme-modal aria-hidden=true>
-<div class=theme-modal-backdrop></div>
-<div class=theme-modal-content role=dialog aria-modal=true aria-labelledby=themeModalTitle>
-<div class=theme-modal-header>
-<h3 id=themeModalTitle>Edit Theme Colors</h3>
-<button type=button class=theme-close id=themeCloseBtn aria-label=Close>✕</button>
-</div>
-<div class=theme-modal-body>
-<p style="margin:0 0 8px">Set values for your CSS variables in your preferred encoding.</p>
-<div id=themeRows class=theme-rows></div>
-<button type=button id=addThemeRowBtn class=theme-add-row>＋ Add another</button>
-<div id=themeMsg class=theme-msg role=status aria-live=polite></div>
-</div>
-<div class=theme-modal-footer>
-<button type=button id=themeCancelBtn class=theme-btn-secondary>Cancel</button>
-<button type=button id=themeSaveBtn class=theme-btn-primary>Save</button>
-</div>
-</div>
-</div>
-<div id=users-modal class="comp-modal hidden" aria-hidden=true>
-<div class=comp-modal-backdrop data-uclose=1></div>
-<div class=comp-modal-card role=dialog aria-modal=true aria-labelledby=usersModalTitle>
-<div class=comp-modal-head>
-<h3 id=usersModalTitle>Users</h3>
-<button class=comp-close type=button data-uclose=1 aria-label=Close>×</button>
-</div>
-<div class=comp-modal-body>
-<div class=comp-actions style=gap:8px;display:flex>
-<button id=btn-add-user type=button>Add User</button>
-<button id=btn-save-users type=button>Save</button>
-</div>
-<div class=comp-table-wrap style=margin-top:8px>
-<table class=comp-table id=users-table>
-<thead>
-<tr>
-<th style=width:40%>Username</th>
-<th style=width:20%>Auth Level (0-10)</th>
-<th style=width:25%>Password</th>
-<th style=width:15%>Actions</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
-</div>
-<div id=users-msg class=comp-msg role=status aria-live=polite></div>
-</div>
-</div>
-</div>
-<style>.theme-modal{position:fixed;inset:0;display:none;z-index:1000}.theme-modal[aria-hidden=false]{display:block}.theme-modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.4)}.theme-modal-content{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#121212;color:#eee;width:min(92vw,760px);border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.5)}.theme-modal-footer,.theme-modal-header{padding:12px 16px;display:flex;align-items:center;justify-content:space-between}.theme-modal-body{padding:0 16px 16px}.theme-close{background:0 0;border:0;color:#aaa;font-size:18px;cursor:pointer}.theme-rows{display:grid;gap:10px;margin:8px 0}.theme-row{display:grid;grid-template-columns:1.2fr 1fr 130px 1.6fr auto;gap:8px;align-items:center}.theme-row input[type=color],.theme-row input[type=text],.theme-row select{width:100%;padding:8px;border-radius:8px;border:1px solid #333;background:#1b1b1b;color:#eee}.theme-row input[type=color]{padding:0;height:40px}.theme-row-del{padding:0 10px;border-radius:8px;border:1px solid #333;background:#1b1b1b;color:#eee;cursor:pointer;height:40px}.theme-add-row{margin-top:6px;border:1px dashed #444;background:0 0;color:#ddd;padding:6px 10px;border-radius:8px;cursor:pointer}.theme-btn-primary,.theme-btn-secondary{padding:8px 12px;border-radius:8px;border:1px solid #333;cursor:pointer}.theme-btn-secondary{background:#1b1b1b;color:#ddd}.theme-btn-primary{background:#2a6df4;color:#fff;border-color:#2a6df4}.theme-msg{margin-top:10px;min-height:20px;font-size:.95em;color:#ccc}.theme-msg.error{color:#ff8585}.theme-msg.ok{color:#7bffb9}.info{cursor:help;color:#666;border:1px solid #aaa;border-radius:50%;width:1.1em;height:1.1em;display:inline-flex;align-items:center;justify-content:center;font-size:.85em;user-select:none}.row{display:grid;grid-template-columns:1fr 1fr 20% 14% 30px;gap:8px;align-items:center}.card{color:var(--text)}.row input[type=text]{width:100%}.row input[type=number]{width:100%}.row .remove{color:#a00;background:0 0;border:1px solid #a00;border-radius:8px;padding:4px 8px;cursor:pointer}</style>
-</div>
-<script src=../js/admin_center.js></script>
+</main>
+<script>
+const root = document.getElementById('admin-page-root');
+const buttons = document.querySelectorAll('.admin-sidebar button');
+const loadedScripts = new Set();
+
+async function loadPage(name) {
+  buttons.forEach(b =>
+    b.classList.toggle('active', b.dataset.page === name)
+  );
+
+  const res = await fetch(`admin/${name}`);
+  root.innerHTML = await res.text();
+
+  root.querySelectorAll("script").forEach(old => {
+    const id = name;
+
+    if (loadedScripts.has(id)) {
+      old.remove();
+      return;
+    }
+
+    loadedScripts.add(id);
+
+    const s = document.createElement("script");
+    s.textContent = old.textContent;
+    document.body.appendChild(s); // append once globally
+    old.remove();
+  });
+
+  const fn = window[`admin_${name}Init`];
+  if (typeof fn === "function") {
+    fn();
+  }
+}
+
+buttons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    loadPage(btn.dataset.page);
+  });
+});
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// default page
+loadPage('general');
+
+function boolToInt(b){ return b ? 1 : 0; }
+function showToast(msg, err) {
+  let toast = document.createElement("div");
+  toast.textContent = msg;
+  toast.style.position = "fixed";
+  toast.style.bottom = "20px";
+  toast.style.right = "20px";
+  toast.style.background = "var(--bg-dark)";
+  toast.style.color = "var(--text)";
+  toast.style.padding = "10px 15px";
+  toast.style.borderRadius = "6px";
+  toast.style.zIndex = 9999;
+  if (err == 0) {
+    toast.classList.remove('comp-bad'); toast.classList.add('comp-ok');
+  } else {
+    toast.classList.remove('comp-ok'); toast.classList.add('comp-bad');
+  }
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.transition = "opacity 0.5s";
+    toast.style.opacity = 0;
+    setTimeout(() => toast.remove(), 500);
+  }, 4000);
+}
+</script>
 </body>
 </html>

@@ -1,0 +1,493 @@
+<section class="card">
+<h3>General station settings<span class=info title="set what visitors see on your page or create logins for your friends">ⓘ</span></h3><div style="display:flex;flex-wrap:wrap;">
+<label class="setting-row">
+  <svg xmlns="http://www.w3.org/2000/svg" height="100%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-label"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M16.52 7h-10.52a2 2 0 0 0 -2 2v6a2 2 0 0 0 2 2h10.52a1 1 0 0 0 .78 -.375l3.7 -4.625l-3.7 -4.625a1 1 0 0 0 -.78 -.375" /></svg>
+  Station Name<input class="setting-field"id="stationName"type="text">
+</label><label class="setting-row">
+  <svg xmlns="http://www.w3.org/2000/svg" height="100%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-note"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M13 20l7 -7" /><path d="M13 20v-6a1 1 0 0 1 1 -1h6v-7a2 2 0 0 0 -2 -2h-12a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7" /></svg>
+  Station Description<input class="setting-field"id="stationMeta"type="text"></label>
+<form class="setting-card"><label>
+  <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="80%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-color-filter"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M13.58 13.79c.27 .68 .42 1.43 .42 2.21c0 1.77 -.77 3.37 -2 4.46a5.93 5.93 0 0 1 -4 1.54c-3.31 0 -6 -2.69 -6 -6c0 -2.76 1.88 -5.1 4.42 -5.79" /><path d="M17.58 10.21c2.54 .69 4.42 3.03 4.42 5.79c0 3.31 -2.69 6 -6 6a5.93 5.93 0 0 1 -4 -1.54" /><path d="M6 8a6 6 0 1 0 12 0a6 6 0 1 0 -12 0" /></svg>
+  <input type="button"class="setting-button"value="Customize Theme"onclick="openThemePopup();"/>
+</label></form>
+<form class="setting-card"action="messages-admin"><label>
+  <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="80%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-mail-spark"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M19 22.5a4.75 4.75 0 0 1 3.5 -3.5a4.75 4.75 0 0 1 -3.5 -3.5a4.75 4.75 0 0 1 -3.5 3.5a4.75 4.75 0 0 1 3.5 3.5" /><path d="M11.5 19h-6.5a2 2 0 0 1 -2 -2v-10a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v5" /><path d="M3 7l9 6l9 -6" /></svg>
+  <input type="submit"class="setting-button"value="Create Post"/>
+</label></form>
+<form class="setting-card"action="configure-about"><label>
+  <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="80%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-article"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 6a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2l0 -12" /><path d="M7 8h10" /><path d="M7 12h10" /><path d="M7 16h10" /></svg>
+  <input type="submit"class="setting-button"value="Edit About Page"/>
+</label></form></div>
+<label class="setting-row">
+  <svg xmlns="http://www.w3.org/2000/svg" height="100%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-brand-speedtest"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5.636 19.364a9 9 0 1 1 12.728 0" /><path d="M16 9l-4 4" /></svg>
+  Hardware Monitoring
+<select id=hwmonitor class="setting-dropdown">
+<option value=off>None</option>
+<option value=hwinfo>HWiNFO</option>
+<option value=native>Native</option></select></label><hr>
+<h3>Access & Users</h3><div style="display:flex;flex-wrap:wrap;">
+<form class="setting-card"><label>
+  <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="80%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-user"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" /><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /></svg>
+  <input type="button"class="setting-button"value="Manage Users"onclick="uopenModal();"/>
+</label></form>
+<form style="border-radius:10px;width:calc(92% + min(4%, 28px));max-width:calc(500px + min(4%, 28px));margin:min(2%, 14px);background:var(--bg-light);"><label>
+  <code style="width:100%;height:100%;color:var(--danger);">Console<br>Not Yet Available</code>
+</label></form></div><hr>
+<input class="setting-save" type="button"value="Save"onclick="saveGen();"/>
+<div id=themeModal class="comp-modal hidden">
+<div class=comp-modal-backdrop onclick="closeModal();"></div>
+<div class=comp-modal-card role=dialog aria-modal=true aria-labelledby=themeModalTitle>
+<div class=comp-modal-head>
+<h3 id=themeModalTitle>Edit Theme Colors</h3>
+<button type=button class=theme-close onclick="closeModal();" aria-label=Close>✕</button>
+</div>
+<div class=theme-modal-body>
+<p style="margin:0 0 8px">Set values for your CSS variables in your preferred encoding.</p>
+<div id=themeRows class=theme-rows></div>
+<button type=button id=addThemeRowBtn class=comp-btn-util onclick="addThemeRow();">＋ Add another</button>
+</div>
+<div class=comp-modal-footer>
+<div></div>
+<button onclick="submitTheme();"id=themeSaveBtn class=comp-btn-primary>Save</button>
+</div>
+</div>
+</div>
+<div id=users-modal class="comp-modal hidden">
+<div class=comp-modal-backdrop data-uclose=1 onclick="closeModal();"></div>
+<div class=comp-modal-card role=dialog aria-modal=true aria-labelledby=usersModalTitle>
+<div class=comp-modal-head>
+<h3 id=usersModalTitle>Users</h3>
+<button type=button class=theme-close onclick="closeModal();" aria-label=Close>✕</button>
+</div>
+<div class=comp-modal-body>
+<div class=comp-table-wrap style=margin-top:8px>
+<table class=comp-table id=users-table>
+<thead>
+<tr>
+<th style=width:40%>Username</th>
+<th style=width:20%>Auth Level (0-10)</th>
+<th style=width:25%>Password</th>
+<th style=width:15%>Actions</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+<div class=comp-modal-footer style=gap:8px;display:flex>
+<input id=btn-add-user type=button onclick="uaddRow();" value="+ Add User">
+<button id=userSaveBtn onclick="usaveAll();">Save</button></div>
+</div></div></div></section>
+<script>
+(() => {
+  if (window.admin_generalInit) return; 
+window.admin_generalInit = async function admin_generalInit() {
+  prefillGen();
+};
+})();
+const VAR_OPTIONS = [
+    'bg','bg-dark','bg-light','border','border-muted',
+    'danger','highlight','info','primary','secondary',
+    'success','text','text-muted','warning' ];
+const ENCODINGS = ['hex', 'rgb', 'hsl', 'oklch'];
+function hexToRgb(hex) {
+    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    if (!m) return null;
+    return { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) };
+  }
+function rgbToHsl(r, g, b) {
+    r/=255; g/=255; b/=255;
+    const max=Math.max(r,g,b), min=Math.min(r,g,b);
+    let h, s, l=(max+min)/2;
+    if(max===min){ h=s=0; }
+    else{
+      const d=max-min;
+      s=l>0.5? d/(2-max-min) : d/(max+min);
+      switch(max){
+        case r: h=(g-b)/d + (g<b?6:0); break;
+        case g: h=(b-r)/d + 2; break;
+        case b: h=(r-g)/d + 4; break;
+      }
+      h/=6;
+    }
+    return {h: Math.round(h*360), s: Math.round(s*100), l: Math.round(l*100)};
+  }
+const srgbToLinear = c => {
+    c /= 255;
+    return (c <= 0.04045) ? c/12.92 : Math.pow((c + 0.055)/1.055, 2.4);
+  };
+function rgbToOKLCH(r8,g8,b8){
+    const r = srgbToLinear(r8), g = srgbToLinear(g8), b = srgbToLinear(b8);
+
+    const l = 0.4122214708*r + 0.5363325363*g + 0.0514459929*b;
+    const m = 0.2119034982*r + 0.6806995451*g + 0.1073969566*b;
+    const s = 0.0883024619*r + 0.2817188376*g + 0.6299787005*b;
+
+    const l_ = Math.cbrt(l), m_ = Math.cbrt(m), s_ = Math.cbrt(s);
+
+    const L = 0.2104542553*l_ + 0.7936177850*m_ - 0.0040720468*s_;
+    const a = 1.9779984951*l_ - 2.4285922050*m_ + 0.4505937099*s_;
+    const b2= 0.0259040371*l_ + 0.7827717662*m_ - 0.8086757660*s_;
+
+    const C = Math.sqrt(a*a + b2*b2);
+    let H = Math.atan2(b2, a) * 180/Math.PI;
+    if (H < 0) H += 360;
+    return { L, C, H };
+  }
+function formatValue(enc, hex) {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return '';
+    if (enc === 'hex') return hex.toLowerCase();
+    if (enc === 'rgb') return `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+    if (enc === 'hsl') {
+      const {h,s,l} = rgbToHsl(rgb.r, rgb.g, rgb.b);
+      return `hsl(${h} ${s}% ${l}%)`;
+    }
+    if (enc === 'oklch') {
+      const {L,C,H} = rgbToOKLCH(rgb.r, rgb.g, rgb.b);
+      const l = (Math.round(L*1000)/1000).toFixed(3);
+      const c = (Math.round(C*1000)/1000).toFixed(3);
+      const h = Math.round(H);
+      return `oklch(${l} ${c} ${h})`;
+    }
+    return hex.toLowerCase();
+  }
+
+function makeVarSelect(selected = '') {
+  const sel = document.createElement('select');
+  VAR_OPTIONS.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v; opt.textContent = v;
+    if (v === selected) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  return sel;
+}
+
+function makeEncodingSelect(selected = 'hex') {
+    const sel = document.createElement('select');
+    ENCODINGS.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v; opt.textContent = v;
+      if (v === selected) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    return sel;
+  }
+
+function openThemePopup() {
+  const rows = document.getElementById('themeRows');
+  const modal = document.getElementById('themeModal');
+  modal.classList.remove('hidden');
+  if (!rows.children.length) {
+    addThemeRow();
+  }
+  const firstInput = rows.querySelector('select, input');
+  if (firstInput) firstInput.focus();
+  document.addEventListener('keydown', escToClose);
+}
+function escToClose(e) { if (e.key === 'Escape') closeModal(); }
+
+function addThemeRow(initial = {variable: VAR_OPTIONS[0], encoding: 'hex', color: '#2a6df4', value: ''}) {
+  const rows = document.getElementById('themeRows');
+  const row = document.createElement('div');
+  row.className = 'theme-row';
+
+  const varSel = makeVarSelect(initial.variable);
+  const encSel = makeEncodingSelect(initial.encoding);
+  const colorInput = document.createElement('input');
+  colorInput.type = 'color';
+  colorInput.value = initial.color || '#2a6df4';
+
+const valInput = document.createElement('input');
+valInput.type = 'text';
+valInput.placeholder = 'computed value…';
+
+const delBtn = document.createElement('button');
+delBtn.type = 'button';
+delBtn.className = 'theme-row-del';
+delBtn.title = 'Remove';
+delBtn.textContent = '−';
+
+valInput.value = initial.value || formatValue(encSel.value, colorInput.value);
+
+  colorInput.addEventListener('input', () => {
+    valInput.value = formatValue(encSel.value, colorInput.value);
+  });
+  encSel.addEventListener('change', () => {
+    valInput.value = formatValue(encSel.value, colorInput.value);
+  });
+  delBtn.addEventListener('click', () => row.remove());
+
+  row.appendChild(varSel);
+  row.appendChild(encSel);
+  row.appendChild(colorInput);
+  row.appendChild(valInput);
+  row.appendChild(delBtn);
+  rows.appendChild(row);
+  }
+
+async function submitTheme() {
+  const rows = document.getElementById('themeRows');
+  const saveBtn = document.getElementById('themeSaveBtn');
+    const payload = {};
+    for (const row of rows.querySelectorAll('.theme-row')) {
+      const varName = row.querySelector('select')?.value;
+      const val = row.querySelector('input[type="text"]')?.value.trim();
+      if (varName && val) payload[varName] = val;
+    }
+    const keys = Object.keys(payload);
+    if (!keys.length) {
+      showToast('Please add at least one variable/value.', 1);
+      return;
+    }
+
+    saveBtn.disabled = true;
+    showToast('Saving…',0);
+    try {
+      const res = await fetch('/api/config/theme', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(await res.text().catch(()=>'HTTP '+res.status));
+      showToast('Theme updated successfully.', 0);
+      setTimeout(closeModal, 700);
+    } catch (e) {
+      showToast('Failed to save: ' + e.message,1);
+    } finally {
+      saveBtn.disabled = false;
+    }
+  }
+
+async function uopenModal() {
+  const umodal = document.getElementById('users-modal');
+  umodal.classList.remove('hidden');
+  document.addEventListener('keydown', escToClose);
+  await uloadUsers();
+}
+function closeModal() {
+  const uTbody = document.querySelector('#users-table tbody');
+  const modal = document.getElementById('themeModal');
+  const umodal = document.getElementById('users-modal');
+  umodal.classList.add('hidden');
+  modal.classList.add('hidden');
+  uTbody.innerHTML = '';
+  document.removeEventListener('keydown', escToClose);
+}
+function uaddRow(u = { id:null, username:'', level:5 }, isNew = true) {
+  const uTbody = document.querySelector('#users-table tbody');
+  const tr = document.createElement('tr');
+  tr.dataset.new = isNew ? '1' : '0';
+  tr.dataset.id  = u.id ?? '';
+
+  tr.innerHTML = `
+    <td>
+      <input type="text" class="u-username" value="${escapeHtml(u.username||'')}" ${isNew ? '' : ''} aria-label="Username">
+    </td>
+    <td>
+      <input type="number" class="u-level" min="0" max="10" step="1" value="${Number.isFinite(u.level)? u.level : 5}" aria-label="Auth level">
+    </td>
+    <td style="display:flex; gap:6px; align-items:center;">
+      <input type="text" class="u-password" placeholder="(leave blank to keep)" aria-label="Password">
+      <button type="button" class="u-gen" title="Generate">🎲</button>
+    </td>
+    <td>
+      <button type="button" class="u-reset">Reset</button>
+      <button type="button" class="u-del" ${isNew?'disabled':''} title="Delete">Delete</button>
+    </td>
+  `;
+  const genBtn   = tr.querySelector('.u-gen');
+  const resetBtn = tr.querySelector('.u-reset');
+  const delBtn   = tr.querySelector('.u-del');
+
+  genBtn.addEventListener('click', () => {
+    const pw = Math.random().toString(36).slice(-10) + '!';
+    tr.querySelector('.u-password').value = pw;
+  });
+
+  resetBtn.addEventListener('click', async () => {
+    const id = Number(tr.dataset.id||0);
+    const pw = tr.querySelector('.u-password').value.trim();
+    if (!id) { showToast('Save row first, then reset password.', 1); return; }
+    if (!pw) { // ask server to generate if empty
+      try {
+        const res = await fetch(`/local/api/users/${id}/reset-password`, {
+          method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+          body: JSON.stringify({ generate: true })
+        });
+        const data = await res.json().catch(()=> ({}));
+        if (!res.ok) throw new Error(data.error || data.message || `HTTP ${res.status}`);
+        tr.querySelector('.u-password').value = data.newPassword || '';
+        showToast('Password generated.', 0);
+      } catch (e) { showToast('Reset failed: '+e.message, 1); }
+      return;
+    }
+    try {
+      const res = await fetch(`/local/api/users/${id}/reset-password`, {
+        method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+        body: JSON.stringify({ newPassword: pw })
+      });
+      if (!res.ok) throw new Error(await res.text().catch(()=>`HTTP ${res.status}`));
+      showToast('Password updated.', 0);
+    } catch (e) { showToast('Reset failed: '+e.message, 1); }
+  });
+
+  delBtn.addEventListener('click', async () => {
+    if (tr.dataset.new === '1') { tr.remove(); return; }
+    const id = Number(tr.dataset.id||0);
+    if (!id) return;
+    if (!confirm(`Delete user "${tr.querySelector('.u-username').value}"?`)) return;
+    try {
+      const res = await fetch(`/local/api/users/${id}`, { method:'DELETE', credentials:'include' });
+      if (!res.ok) throw new Error(await res.text().catch(()=>`HTTP ${res.status}`));
+      tr.remove();
+      showToast('User deleted.', 0);
+    } catch (e) { showToast('Delete failed: '+e.message,1); }
+  });
+
+  uTbody.appendChild(tr);
+}
+
+async function uloadUsers() {
+  const uTbody = document.querySelector('#users-table tbody');
+  uTbody.innerHTML = '';
+  try {
+    const res = await fetch('/local/api/users', { credentials:'include' });
+    if (!res.ok) throw new Error('Failed to fetch users');
+    const list = await res.json();
+    if (list != null)
+    {
+      list.forEach(u => uaddRow({ id:u.id, username:u.username, level: u.level }, false));
+    }
+  } catch (e) {
+    showToast(e.message, 1);
+  }
+}
+
+async function usaveAll() {
+  const uTbody = document.querySelector('#users-table tbody');
+  const rows = document.getElementById('themeRows');
+  const uBtnSave = document.getElementById('userSaveBtn');
+  uBtnSave.disabled = true;
+  try {
+    const rows = Array.from(uTbody.querySelectorAll('tr'));
+    for (const tr of rows) {
+      const isNew   = tr.dataset.new === '1';
+      const id      = Number(tr.dataset.id||0);
+      const user    = tr.querySelector('.u-username').value.trim();
+      const level   = parseInt(tr.querySelector('.u-level').value, 10);
+      const pwField = tr.querySelector('.u-password');
+      const pw      = (pwField.value||'').trim();
+
+      if (!user || isNaN(level) || level<0 || level>10) {
+        throw new Error('Each row needs a username and a level 0..10.');
+      }
+
+      if (isNew) {
+        if (!pw) throw new Error(`New user "${user}" requires a password (or use 🎲 then Save).`);
+        const res = await fetch('/local/api/users', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          credentials:'include',
+          body: JSON.stringify({ username:user, level, password: pw })
+        });
+        const data = await res.json().catch(()=> ({}));
+        if (!res.ok) throw new Error(data.error || `Create failed for "${user}"`);
+        tr.dataset.new = '0';
+        tr.dataset.id  = data.id;
+        tr.querySelector('.u-del').disabled = false;
+        pwField.value = '';
+      } else {
+        {
+          const res = await fetch(`/local/api/users/${id}/username`, {
+            method:'PUT', headers:{'Content-Type':'application/json'}, credentials:'include',
+            body: JSON.stringify({ username: user })
+          });
+          if (!res.ok) throw new Error(`Update username failed for id=${id}`);
+        }
+        {
+          const res = await fetch(`/local/api/users/${id}/level`, {
+            method:'PUT', headers:{'Content-Type':'application/json'}, credentials:'include',
+            body: JSON.stringify({ level })
+          });
+          if (!res.ok) throw new Error(`Update level failed for id=${id}`);
+        }
+        if (pw) {
+          const res = await fetch(`/local/api/users/${id}/reset-password`, {
+            method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+            body: JSON.stringify({ newPassword: pw })
+          });
+          if (!res.ok) throw new Error(`Password reset failed for "${user}"`);
+          pwField.value = '';
+        }
+      }
+    }
+    showToast('All users saved.', 0);
+    await uloadUsers();
+  } catch (e) {
+  showToast(e.message, 1);
+  } finally {
+    uBtnSave.disabled = false;
+  }
+}
+
+async function prefillGen(){
+  const hwSelect = document.getElementById('hwmonitor');
+  try {
+    const res = await fetch('/local/api/settings', { method: 'GET' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const settings = await res.json(); 
+    if (typeof settings['hwmonitor'] === 'string') {
+      const v = settings['hwmonitor'];
+      hwSelect.value = v;
+    }
+    showToast('Loaded',0);
+  } catch (err) {
+    console.error(err);
+    showToast(`Load failed: ${err.message}`,1);
+  }
+}
+
+async function saveGen(){
+  const payload = {};
+  const hwSelect = document.getElementById('hwmonitor');
+  payload['hwmonitor'] = hwSelect.value;
+  try {
+    const res = await fetch('/local/api/settings', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || data.message || `HTTP ${res.status}`);
+    showToast(`Saved (${data.updated} updated)`, 0);
+  } catch (err) {
+    console.error(err);
+    showToast(`Save failed: ${err.message}`, 1);
+  }
+}
+</script>
+<style>
+.hidden{display:none;}
+.comp-modal {position:fixed;inset:0;z-index:1000;}
+.comp-modal-backdrop{position:absolute;inset:0;}
+.comp-modal-card{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg-light);color:var(--text);width:min(92vw,760px);border-radius:12px;box-shadow:0 10px 40px var(--border-muted)}
+.comp-modal-head,.comp-modal-footer{display:flex;align-items:center;justify-content:space-between;border-bottom:1pxsolid var(--border-muted);padding:8px 12px;}
+.comp-modal-body {padding:12px;}
+.comp-btn-util{margin-top:6px;border:1px dashed var(--border);background:0 0;color:var(--text-muted);padding:6px 10px;border-radius:8px;cursor:pointer}
+.comp-btn-primary{padding:8px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--primary);color:var(--text);}
+
+.theme-modal-body{padding:0 16px 16px}.theme-close{background:0 0;border:0;color:var(--text);font-size:18px;cursor:pointer}
+.theme-rows{display:grid;gap:10px;margin:8px 0}.theme-row{display:grid;grid-template-columns:1.2fr 1fr 130px 1.6fr auto;gap:8px;align-items:center}
+.theme-row input[type=color],.theme-row input[type=text],
+.theme-row select{width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text)}
+.theme-row input[type=color]{padding:0;height:40px}
+.theme-row-del{padding:0 10px;border-radius:8px;border:1px solid var(--border);background:#1b1b1b;color:var(--text);cursor:pointer;height:40px}
+
+.comp-actions{display:flex;gap:8px;margin-bottom:10px;}
+.comp-table-wrap{max-height:60vh;overflow:auto;border:1px solid var(--border);border-radius:8px;}
+.comp-table{width:100%;border-collapse:collapse;}
+.comp-table th,.comp-table td{border-bottom:1px solid var(--border-muted);padding:8px}
+.comp-table input[type="text"]{width:100%}
+</style>
