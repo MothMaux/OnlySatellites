@@ -16,24 +16,24 @@
 </label></form>
 <form class="setting-card"action="configure-about"><label>
   <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="80%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-article"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 6a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2l0 -12" /><path d="M7 8h10" /><path d="M7 12h10" /><path d="M7 16h10" /></svg>
-  <input type="button"class="setting-button"value="Edit About Page"/>
+  <input type="submit"class="setting-button"value="Edit About Page"/>
 </label></form></div>
 <label class="setting-row">
   <svg xmlns="http://www.w3.org/2000/svg" height="100%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-brand-speedtest"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5.636 19.364a9 9 0 1 1 12.728 0" /><path d="M16 9l-4 4" /></svg>
   Hardware Monitoring
 <select id=hwmonitor class="setting-dropdown">
-<option id=off>None</option>
-<option id=text>HWiNFO</option>
-<option id=image>Native</option></select></label><hr>
+<option value=off>None</option>
+<option value=hwinfo>HWiNFO</option>
+<option value=native>Native</option></select></label><hr>
 <h3>Access & Users</h3><div style="display:flex;flex-wrap:wrap;">
 <form class="setting-card"><label>
   <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="80%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-user"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" /><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /></svg>
   <input type="button"class="setting-button"value="Manage Users"onclick="uopenModal();"/>
 </label></form>
 <form style="border-radius:10px;width:calc(92% + min(4%, 28px));max-width:calc(500px + min(4%, 28px));margin:min(2%, 14px);background:var(--bg-light);"><label>
-  <code style="width:100%;height: 100%;">Console</code>
+  <code style="width:100%;height:100%;color:var(--danger);">Console<br>Not Yet Available</code>
 </label></form></div><hr>
-<input class="setting-save" type="button"value="Save"onclick="saveSettings();"/>
+<input class="setting-save" type="button"value="Save"onclick="saveGen();"/>
 <div id=themeModal class="comp-modal hidden">
 <div class=comp-modal-backdrop onclick="closeModal();"></div>
 <div class=comp-modal-card role=dialog aria-modal=true aria-labelledby=themeModalTitle>
@@ -81,6 +81,7 @@
 (() => {
   if (window.admin_generalInit) return; 
 window.admin_generalInit = async function admin_generalInit() {
+  prefillGen();
 };
 })();
 const VAR_OPTIONS = [
@@ -88,7 +89,6 @@ const VAR_OPTIONS = [
     'danger','highlight','info','primary','secondary',
     'success','text','text-muted','warning' ];
 const ENCODINGS = ['hex', 'rgb', 'hsl', 'oklch'];
-const hwSelect = document.getElementById('hwmonitor');
 function hexToRgb(hex) {
     const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     if (!m) return null;
@@ -429,6 +429,42 @@ async function usaveAll() {
   showToast(e.message, 1);
   } finally {
     uBtnSave.disabled = false;
+  }
+}
+
+async function prefillGen(){
+  const hwSelect = document.getElementById('hwmonitor');
+  try {
+    const res = await fetch('/local/api/settings', { method: 'GET' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const settings = await res.json(); 
+    if (typeof settings['hwmonitor'] === 'string') {
+      const v = settings['hwmonitor'];
+      hwSelect.value = v;
+    }
+    showToast('Loaded',0);
+  } catch (err) {
+    console.error(err);
+    showToast(`Load failed: ${err.message}`,1);
+  }
+}
+
+async function saveGen(){
+  const payload = {};
+  const hwSelect = document.getElementById('hwmonitor');
+  payload['hwmonitor'] = hwSelect.value;
+  try {
+    const res = await fetch('/local/api/settings', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || data.message || `HTTP ${res.status}`);
+    showToast(`Saved (${data.updated} updated)`, 0);
+  } catch (err) {
+    console.error(err);
+    showToast(`Save failed: ${err.message}`, 1);
   }
 }
 </script>

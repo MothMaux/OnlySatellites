@@ -2,16 +2,95 @@
 <h3>Rate Limiting<span class="info" title="Set network request limits/defaults">ⓘ</span></h3>
 <label class="setting-row">
   <svg xmlns="http://www.w3.org/2000/svg" height="100%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-refresh"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" /><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" /></svg>
-  Update Cooldown<input class="setting-field"id="thumbWk"type="number">s
+  Update Cooldown<input class="setting-field"id="update-cd"type="number">s
 </label><label class="setting-row">
   <svg xmlns="http://www.w3.org/2000/svg" height="100%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-stack-2"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 4l-8 4l8 4l8 -4l-8 -4" /><path d="M4 12l8 4l8 -4" /><path d="M4 16l8 4l8 -4" /></svg>
-  Gallery Display Limit<input class="setting-field"id="thumbWk"type="number">passes
+  Gallery Display Limit<input class="setting-field"id="pass-limit"type="number">passes
 </label><label class="setting-row">
   <svg xmlns="http://www.w3.org/2000/svg" height="100%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-timeline"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 16l6 -7l5 5l5 -6" /><path d="M14 14a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M9 9a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M3 16a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M19 8a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg>
-  SatDump Polling Rate<input class="setting-field"id="thumbWk"type="number">ms
+  SatDump Polling Rate<input class="setting-field"id="sat-rate"type="number">ms
 </label><label class="setting-row">
   <svg xmlns="http://www.w3.org/2000/svg" height="100%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-timeline"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 16l6 -7l5 5l5 -6" /><path d="M14 14a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M9 9a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M3 16a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M19 8a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg>
-  SatDump Graph Span<input class="setting-field"id="thumbWk"type="number">s
+  SatDump Graph Span<input class="setting-field"id="sat-span"type="number">s
 </label>
 </div>
+<input class="setting-save" type="button"value="Save"onclick="saveNet();"/>
 </section>
+<script>
+(() => {
+if (window.admin_netInit) return; 
+window.admin_netInit = async function admin_netInit() {
+  prefillNet();
+};
+})();
+async function prefillNet() {
+  const updateCdInput = document.getElementById('update-cd');
+  const passLimitInput = document.getElementById('pass-limit');
+  const satRateInput = document.getElementById('sat-rate');
+  const satSpanInput = document.getElementById('sat-span');
+  try {
+  const res = await fetch('/local/api/settings', { method: 'GET' });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const settings = await res.json(); 
+
+  if (settings['update_cd'] != null) {
+    const v = parseInt(settings['update_cd'], 10);
+    if (!isNaN(v) && v >= 0) updateCdInput.value = String(v);
+  }
+  if (settings['pass_limit'] != null) {
+    const v = parseInt(settings['pass_limit'], 10);
+    if (!isNaN(v) && v >= 0) passLimitInput.value = String(v);
+  }
+  if (settings['satdump_rate'] != null) {
+    const v = parseInt(settings['satdump_rate'], 10);
+    if (!isNaN(v) && v >= 0) satRateInput.value = String(v);
+  }
+  if (settings['satdump_span'] != null) {
+    const v = parseInt(settings['satdump_span'], 10);
+    if (!isNaN(v) && v >= 0) satSpanInput.value = String(v);
+  }
+
+  showToast('Loaded',0);
+  } catch (err) {
+    console.error(err);
+    showToast(`Load failed: ${err.message}`,1);
+  }
+}
+
+async function saveNet() {
+  const updateCdInput = document.getElementById('update-cd');
+  const passLimitInput = document.getElementById('pass-limit');
+  const satRateInput = document.getElementById('sat-rate');
+  const satSpanInput = document.getElementById('sat-span');
+  const payload = {};
+{
+  const v = parseInt(updateCdInput.value || '0', 10);
+  if (!isNaN(v) && v >= 0) payload['update_cd'] = String(v);
+}
+{
+  const v = parseInt(passLimitInput.value || '0', 10);
+  if (!isNaN(v) && v >= 0) payload['pass_limit'] = String(v);
+}
+{
+  const v = parseInt(satRateInput.value || '0', 10);
+  if (!isNaN(v) && v >= 0) payload['satdump_rate'] = String(v);
+}
+{
+  const v = parseInt(satSpanInput.value || '0', 10);
+  if (!isNaN(v) && v >= 0) payload['satdump_span'] = String(v);
+}
+  try {
+    const res = await fetch('/local/api/settings', {
+    method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || data.message || `HTTP ${res.status}`);
+    showToast(`Saved (${data.updated} updated)`, 0);
+  } catch (err) {
+    console.error(err);
+    showToast(`Save failed: ${err.message}`, 1);
+  }
+}
+</script>

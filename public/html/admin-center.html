@@ -47,7 +47,7 @@
 --success:oklch(0.7 0.15 160);
 --text:oklch(0.96 0.1 301);
 --text-muted:oklch(0.76 0.1 301);
---warning:oklch(0.7 0.15 100)
+--warning:oklch(0.7 0.15 80);
 }
 body{background-color:var(--bg); font-family:sans-serif;margin:0;padding:0}
 h3{display:flex;align-items:center;gap:.5rem}
@@ -90,6 +90,7 @@ hr{display:block;margin-block-start:0.5em;margin-block-end:0.5em;margin-inline-s
 .setting-dropdown{color:var(--text); height: 35%; background-color: var(--bg-dark); border: var(--border) solid 2px; margin-left: 12px; border-radius: 10px;}
 .setting-dropdown > option {border: none;}
 .setting-field{color:var(--text-muted);max-width:900px;border:var(--border) solid; background:var(--bg-dark)}
+.disabled{color: var(--danger);}
 .comp-msg{margin-top:10px;min-height:20px;font-size:.95em;color:var(--text-muted)}
 .comp-bad{color:var(--danger)}
 .comp-ok{color:var(--success)}
@@ -151,8 +152,8 @@ function showToast(msg, err) {
   toast.style.position = "fixed";
   toast.style.bottom = "20px";
   toast.style.right = "20px";
-  toast.style.background = "rgba(0,0,0,0.8)";
-  toast.style.color = "#fff";
+  toast.style.background = "var(--bg-dark)";
+  toast.style.color = "var(--text)";
   toast.style.padding = "10px 15px";
   toast.style.borderRadius = "6px";
   toast.style.zIndex = 9999;

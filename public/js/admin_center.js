@@ -3,8 +3,7 @@ const uOpenBtn    = document.getElementById('btn-open-users');
 const uMsg        = document.getElementById('users-msg');
 const uBtnAdd     = document.getElementById('btn-add-user');
 const uBtnSave    = document.getElementById('btn-save-users');
-const updateCdInput   = document.getElementById('update-cd');
-const passLimitInput  = document.getElementById('pass-limit');
+
 
 const saveSettingsBtn    = document.getElementById('settings-save');
 const statusEl   = document.getElementById('settings-status');
@@ -17,7 +16,6 @@ archToggle.addEventListener('change', updateArchiveVisibility);
   // --- Prefill from server ---
 async function prefillSettings() {
     statusEl.textContent = 'Loading…';
-    //await loadSatdumpList();
     try {
       const res = await fetch('/local/api/settings', { method: 'GET' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -25,9 +23,7 @@ async function prefillSettings() {
 
       if (typeof settings['hwmonitor'] === 'string') {
         const v = settings['hwmonitor'].toLowerCase();
-        if (['off', 'hwinfo', 'native'].includes(v)) {
-          hwSelect.value = v;
-        }
+        hwSelect.value = v;
       }
 
       const active = (settings['archive.active'] === '1');

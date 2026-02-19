@@ -42,7 +42,7 @@ function makeInstanceRow(name = '', address = '', port = '', log = '', isNew = t
 
   row.innerHTML = `
     <input type="text" class="sd-name" placeholder="Name (e.g., APT Station)" value="${escapeHtml(name)}" aria-label="Satdump name">
-    <input type="text"   class="sd-address" placeholder="Address (blank = local)"  value="${escapeHtml(address)}" aria-label="Satdump address">
+    <input type="text" class="sd-address" placeholder="Address (blank = local)"  value="${escapeHtml(address)}" aria-label="Satdump address">
     <input type="number" class="sd-port"    placeholder="Port (e.g., 8081)"        value="${escapeHtml(port)}"   min="0" max="65535" step="1" aria-label="Satdump port">
     <input type="checkbox" class="sd-log" ${logChecked ? 'checked' : ''} aria-label="Enable logging">
     <button type="button" class="remove" title="Remove">✕</button>
@@ -150,4 +150,9 @@ async function saveSatdump() {
 </script>
 <style>
 .row{display:grid;grid-template-columns:calc(35% - 10px) calc(35% - 5px) calc(20% - 5px) calc(10% - 5px) 25px;margin:8px;font-weight:600;}
+.remove{color:var(--danger);background:none;border:var(--warning) solid 2px;border-radius:1em;padding:.1em .1em;}
+.sd-name,.sd-address,.sd-port,.sd-log{color:var(--text);background:var(--bg-dark);border:var(--border-muted) solid 1px}
+.sd-log{appearance:none;margin:0 10%;border-radius:1em;display:grid;place-content:center;}
+.sd-log::before {content: "✓";transform:scale(0);transition: 100ms transform ease-in-out;}
+.sd-log:checked::before{transform:scale(1);}
 </style>
