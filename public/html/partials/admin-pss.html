@@ -1,0 +1,222 @@
+<section class="card">
+<h3>
+Images
+<span class=info title="Set composite names for what the filename will appear as.\nDisabling a composite will make it non-viewable in the gallery">ⓘ</span>
+</h3>
+<div style="display:flex;flex-wrap:wrap;">
+<form class="setting-card"><label>
+  <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="80%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-layers-linked"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M19 8.268a2 2 0 0 1 1 1.732v8a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2v-8a2 2 0 0 1 2 -2h3" /><path d="M5 15.734a2 2 0 0 1 -1 -1.734v-8a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-3" /></svg>
+  <input type="button"class="setting-button"value="Manage Composites"onclick="openModal();"/>
+</label></form>
+<form action="configure-passes"class="setting-card"><label>
+  <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="80%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-panorama-vertical"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M18.463 4.338c-1.932 5.106 -1.932 10.211 0 15.317a1 1 0 0 1 -.934 1.345h-11c-.692 0 -1.208 -.692 -.962 -1.34c1.932 -5.107 1.932 -10.214 0 -15.321c-.246 -.648 .243 -1.339 .935 -1.339h11.028c.693 0 1.18 .691 .935 1.338l-.002 0" /></svg>
+  <input type="submit"class="setting-button"value="Configure Passes"/>
+</label></form>
+<form class="setting-card disabled"title="Update database with new composite names. Use this if you have made changes to composites"><label>
+  <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="80%" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-refresh-dot"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" /><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" /><path d="M11 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg>
+  <input type="button"class="setting-button disabled"value="Reload Composites"onclick="alert('Function Coming Soon');"/>
+</label></form>
+<form class="setting-card"><label>
+  <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="80%" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-refresh-alert"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" /><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" /><path d="M12 9l0 3" /><path d="M12 15l.01 0" /></svg>
+  <input type="button"class="setting-button"value="Repopulate Database"onclick="repopulateDB();"/>
+</label></form>
+</div>
+<h3>
+Metadata
+<span class=info title="">ⓘ</span>
+</h3>
+<div style="display:flex;flex-wrap:wrap;">
+<form class="setting-card disabled"><label class="setting-toggle disabled">
+  <input disabled type=checkbox id=archive-active style="position: absolute;">
+  <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="80%" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-line-height"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 8l3 -3l3 3" /><path d="M3 16l3 3l3 -3" /><path d="M6 5l0 14" /><path d="M13 6l7 0" /><path d="M13 12l7 0" /><path d="M13 18l7 0" /></svg>
+  Image Height (px) <span class=info title="Display the length of pictures (for polar orbit satellites where height is determined by how long you rx the signal for)">ⓘ</span>
+</label></form>
+<form class="setting-card disabled"title="A general rating for image quality for LRPT and downlinks without error correction like viterbi"><label class="setting-toggle disabled">
+  <input disabled type=checkbox id=archive-active style="position: absolute;">
+  <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="80%" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-decimal"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M17 8a2 2 0 0 1 2 2v4a2 2 0 1 1 -4 0v-4a2 2 0 0 1 2 -2" /><path d="M10 8a2 2 0 0 1 2 2v4a2 2 0 1 1 -4 0v-4a2 2 0 0 1 2 -2" /><path d="M5 16h.01" /></svg>
+  Image Quality
+</label></form>
+</div>
+<div id=composites-modal class="comp-modal hidden">
+<div class=comp-modal-backdrop data-close=1 onclick="ccloseModal();"></div>
+<div class=comp-modal-card>
+<div class=comp-modal-head>
+<h3>Composites</h3>
+<button type=button class=comp-close onclick="ccloseModal();" aria-label=Close>✕</button>
+</div>
+<div class=comp-modal-body>
+<div class=comp-table-wrap>
+<table class=comp-table id=composites-table>
+<thead>
+<tr>
+<th style=width:50%>Key</th>
+<th style=width:30%>Name</th>
+<th style=width:10%>Enabled</th>
+<th style=width:10%>Actions</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+<div class=comp-modal-footer style=gap:8px;display:flex>
+<button class="comp-btn-util" onclick="caddRow();">Add Composite</button>
+<button id="btn-save-composites"class="comp-btn-primary" onclick="csaveAll();">Save</button>
+</div></div></div></div>
+</section>
+<script>
+async function repopulateDB() {
+  try {
+    const resp = await fetch("/api/repopulate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" }
+    });
+    const data = await resp.json();
+
+    if (resp.ok) {
+      const dur = data.duration_ms ? `${data.duration_ms} ms` : "";
+      showToast(`${data.message} (${dur})`, 0);
+    } else {
+      showToast(`Error: ${data.message || "unknown error"}`, 1);
+    }
+  } catch (err) {
+    showToast("Network error: " + err.message, 1);
+  }
+}
+
+async function loadComposites() {
+  const tbody = document.querySelector('#composites-table tbody');
+  tbody.innerHTML = '';
+  try {
+    const res = await fetch('/local/api/composites', { credentials: 'include' });
+    if (!res.ok) throw new Error('Failed to fetch composites');
+    const list = await res.json();
+    list.forEach(c => caddRow({
+      key: c.key, name: c.name, enabled: c.enabled === true || c.enabled === 1
+    }, false));
+  } catch (e) {
+    showToast(e.message, 1);
+  }
+}
+
+function caddRow(c = {key:'', name:'', enabled:true}, isNew = true) {
+  const tbody = document.querySelector('#composites-table tbody');
+  const tr = document.createElement('tr');
+  tr.dataset.new = isNew ? '1' : '0';
+  tr.innerHTML = `
+    <td>
+      <input type="text" class="comp-key" value="${escapeHtml(c.key)}" ${isNew ? '' : 'readonly'}>
+    </td>
+    <td>
+      <input type="text" class="comp-name" value="${escapeHtml(c.name)}">
+    </td>
+    <td style="text-align:center">
+      <input type="checkbox" class="comp-enabled" ${c.enabled ? 'checked' : ''}>
+    </td>
+    <td>
+      <button type="button" class="comp-del">Delete</button>
+    </td>
+  `;
+  tr.querySelector('.comp-del').addEventListener('click', () => conDeleteRow(tr));
+  tbody.appendChild(tr);
+}
+
+async function conDeleteRow(tr) {
+  const key = tr.querySelector('.comp-key').value.trim();
+  const isNew = tr.dataset.new === '1';
+  if (isNew || !key) {
+    tr.remove();
+    return;
+  }
+  if (!confirm(`Delete composite "${key}"?`)) return;
+  try {
+    const res = await fetch('/local/api/composites/' + encodeURIComponent(key), {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+    if (!res.ok) throw new Error('Delete failed');
+    tr.remove();
+    showToast(`Deleted ${key}`, 0);
+  } catch (e) {
+    showToast(e.message,1);
+  }
+}
+
+async function csaveAll() {
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+  const btnSave = document.querySelector('#btn-save-composites');
+  btnSave.disabled = true;
+  try {
+    const rows = $$('#composites-table tbody tr');
+    const payloads = rows.map(tr => {
+      return {
+        key: tr.querySelector('.comp-key').value.trim(),
+        name: tr.querySelector('.comp-name').value.trim(),
+        enabled: tr.querySelector('.comp-enabled').checked
+      };
+    });
+    for (const p of payloads) {
+      if (!p.key || !p.name) {
+        throw new Error('Each row needs a non-empty key and name.');
+      }
+    }
+    for (const p of payloads) {
+      const res = await fetch('/local/api/composites', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        credentials: 'include',
+        body: JSON.stringify(p)
+      });
+      if (!res.ok) {
+        const txt = await res.text().catch(()=> '');
+        throw new Error(`Save failed for "${p.key}": ${txt || res.status}`);
+      }
+    }
+    showToast('All composites saved.', 0);
+    await loadComposites();
+  } catch (e) {
+    showToast(e.message, 1);
+  } finally {
+    btnSave.disabled = false;
+  }
+}
+
+async function openModal() {
+  const cmodal = document.querySelector('#composites-modal');
+  cmodal.classList.remove('hidden');
+  document.addEventListener('keydown', escToClose);
+  await loadComposites();
+}
+
+function ccloseModal() {
+  const cmodal = document.querySelector('#composites-modal');
+  const tbody = document.querySelector('#composites-table tbody');
+  cmodal.classList.add('hidden');
+  tbody.innerHTML = '';
+  document.removeEventListener('keydown', escToClose);
+}
+
+function escToClose(e) { if (e.key === 'Escape') ccloseModal(); }
+
+(() => {
+  if (window.admin_passesInit) return; 
+  window.admin_passesInit = async function admin_passesInit() {
+};})();
+</script>
+<style>
+.hidden{display:none;}
+.comp-modal {position:fixed;inset:0;z-index:1000;}
+.comp-modal-backdrop{position:absolute;inset:0;}
+.comp-modal-card{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg-light);color:var(--text);width:min(92vw,760px);border-radius:12px;box-shadow:0 10px 40px var(--border-muted)}
+.comp-modal-head,.comp-modal-footer{display:flex;align-items:center;justify-content:space-between;border-bottom:1pxsolid var(--border-muted);padding:8px 12px;}
+.comp-modal-body {padding:12px;}
+.comp-btn-util{margin-top:6px;border:1px dashed var(--border);background:0 0;color:var(--text-muted);padding:6px 10px;border-radius:8px;cursor:pointer}
+.comp-btn-primary{padding:8px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--primary);color:var(--text);}
+.comp-actions{display:flex;gap:8px;margin-bottom:10px;}
+.comp-table-wrap{max-height:60vh;overflow:auto;border:1px solid var(--border);border-radius:8px;}
+.comp-table{width:100%;border-collapse:collapse;}
+.comp-table th,.comp-table td{border-bottom:1px solid var(--border-muted);padding:8px}
+.comp-table input[type="text"]{width:100%}
+
+.comp-close{background:0 0;border:0;color:var(--text);font-size:18px;cursor:pointer}
+.comp-close { font-size: 20px; line-height: 1; background: transparent; color: #eee; border: 0; cursor: pointer; }
+</style>

@@ -1,0 +1,158 @@
+<section class="card">
+<h3>
+Satdump instances
+<span class=info title="Add one or more Satdump http servers to proxy.">ⓘ</span>
+</h3>
+<div class=row>
+<div>Name</div>
+<div>Address (optional)</div>
+<div>Port</div>
+<div>Enable logging</div>
+<div></div>
+</div><hr>
+<div id=satdump-rows></div>
+<div style=display:flex;gap:8px;margin-top:8px>
+<button onclick="makeInstanceRow();" style="color:var(--text);background:var(--bg-light);border:none;border-radius:12px;width:100%;padding:16px 12px;margin-top:6px;cursor:pointer" type=button id=satdump-add>
+  + Add instance</button>
+</div>
+<hr>
+<button class="setting-save" type=button id=satdump-save onclick="saveSatdump">Save instances</button>
+</div>
+</section>
+<script>
+(() => {
+if (window.admin_satdumpInit) return;
+window.admin_satdumpInit = async function admin_satdumpInit() {
+loadSatdumpList();
+};})();
+
+
+function clearInstanceRows() { 
+  const rowsEl = document.getElementById('satdump-rows');
+  rowsEl.innerHTML = '';
+}
+
+function makeInstanceRow(name = '', address = '', port = '', log = '', isNew = true) {
+  const rowsEl = document.getElementById('satdump-rows');
+  const row = document.createElement('div');
+  row.className = 'row';
+  row.dataset.new = isNew ? '1' : '0';
+  row.dataset.orig = name;
+  const logChecked = (String(log) === '1' || log === 1 || log === true);
+
+  row.innerHTML = `
+    <input type="text" class="sd-name" placeholder="Name (e.g., APT Station)" value="${escapeHtml(name)}" aria-label="Satdump name">
+    <input type="text" class="sd-address" placeholder="Address (blank = local)"  value="${escapeHtml(address)}" aria-label="Satdump address">
+    <input type="number" class="sd-port"    placeholder="Port (e.g., 8081)"        value="${escapeHtml(port)}"   min="0" max="65535" step="1" aria-label="Satdump port">
+    <input type="checkbox" class="sd-log" ${logChecked ? 'checked' : ''} aria-label="Enable logging">
+    <button type="button" class="remove" title="Remove">✕</button>
+  `;
+  row.querySelector('.remove').addEventListener('click', () => row.remove());
+  rowsEl.appendChild(row);
+}
+
+async function loadSatdumpList() {
+  let satdumpOriginalNames = new Set();
+  clearInstanceRows();
+  try {
+    const res = await fetch('/local/api/satdump', { credentials: 'include' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const list = await res.json();
+    if (Array.isArray(list) && list.length) {
+      list.sort((a,b)=> String(a.name).localeCompare(String(b.name)));
+      for (const sd of list) {
+        makeInstanceRow(sd.name || '', sd.address || '', String(sd.port ?? '0'), sd.log || '0', /*isNew*/false);
+        if (sd.name) satdumpOriginalNames.add(sd.name);
+      }
+    } else {
+      makeInstanceRow();
+    }
+  } catch (e) {
+    console.error('Failed to load satdump list:', e);
+    makeInstanceRow();
+  }
+}
+
+async function saveSatdump() {
+  const rowsEl = document.getElementById('satdump-rows');
+  const saveSatdumpBtn = document.getElementById('satdump-save');
+  saveSatdumpBtn.disabled = true;
+  showToast("Saving Satdump…");
+
+  try {
+    const rows = Array.from(rowsEl.querySelectorAll('.row'));
+    const current = rows.map(r => {
+    const name    = r.querySelector('.sd-name').value.trim();
+    const address = r.querySelector('.sd-address').value.trim();
+    const portStr = r.querySelector('.sd-port').value.trim();
+    const port    = portStr === '' ? 0 : Math.max(0, Math.min(65535, parseInt(portStr, 10) || 0));
+    const log     = boolToInt(r.querySelector('.sd-log').checked);
+    return { el: r, name, address, port, log, isNew: r.dataset.new === '1', orig: r.dataset.orig || '' };
+  });
+
+  for (const c of current) {
+    if (!c.name) throw new Error('Each Satdump row needs a non-empty name.');
+    if (Number.isNaN(c.port) || c.port < 0 || c.port > 65535) {
+      throw new Error(`Invalid port for "${c.name}" (must be 0..65535).`);
+    }
+  }
+
+    for (const c of current) {
+      const isRename = c.orig && c.orig !== c.name;
+      if (c.isNew || isRename || !satdumpOriginalNames.has(c.name)) {
+        const res = await fetch('/local/api/satdump', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          credentials: 'include',
+          body: JSON.stringify({ name: c.name, address: c.address, port: c.port, log: c.log })
+        });
+        if (!res.ok) {
+          const txt = await res.text().catch(()=> '');
+          throw new Error(`Create failed for "${c.name}": ${txt || res.status}`);
+        }
+      } else {
+        const body = { name: c.name, address: c.address, port: c.port, log: c.log };
+        const res = await fetch('/local/api/satdump/' + encodeURIComponent(c.name), {
+          method: 'PUT',
+          headers: {'Content-Type':'application/json'},
+          credentials: 'include',
+          body: JSON.stringify(body)
+        });
+        if (!res.ok) {
+          const txt = await res.text().catch(()=> '');
+          throw new Error(`Update failed for "${c.name}": ${txt || res.status}`);
+        }
+      }
+    }
+
+    const currentNames = new Set(current.map(c => c.name));
+    const toDelete = Array.from(satdumpOriginalNames).filter(n => !currentNames.has(n));
+    for (const name of toDelete) {
+      const res = await fetch('/local/api/satdump/' + encodeURIComponent(name), {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      if (!res.ok) {
+        const txt = await res.text().catch(()=> '');
+        throw new Error(`Delete failed for "${name}": ${txt || res.status}`);
+      }
+    }
+
+    await loadSatdumpList();
+    showToast("Instances Saved")
+  } catch (e) {
+    console.error(e);
+    statusEl.textContent = `Satdump save failed: ${e.message}`;
+  } finally {
+    saveSatdumpBtn.disabled = false;
+  }
+}
+</script>
+<style>
+.row{display:grid;grid-template-columns:calc(35% - 10px) calc(35% - 5px) calc(20% - 5px) calc(10% - 5px) 25px;margin:8px;font-weight:600;}
+.remove{color:var(--danger);background:none;border:var(--warning) solid 2px;border-radius:1em;padding:.1em .1em;}
+.sd-name,.sd-address,.sd-port,.sd-log{color:var(--text);background:var(--bg-dark);border:var(--border-muted) solid 1px}
+.sd-log{appearance:none;margin:0 10%;border-radius:1em;display:grid;place-content:center;}
+.sd-log::before {content: "✓";transform:scale(0);transition: 100ms transform ease-in-out;}
+.sd-log:checked::before{transform:scale(1);}
+</style>
