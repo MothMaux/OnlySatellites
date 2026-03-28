@@ -23,10 +23,10 @@ And much more to come
 
 Dependencies: 
 Golang 1.21 or later is required for building.
-   Windows Run: libvips, libglib
-   Windows build: mingw, gcc, libvips, libglib
-   Linux build and run: vips
-      `sudo apt install libvips libvips-dev`
+Windows Run: libvips, libglib
+Windows build: mingw, gcc, libvips, libglib
+Linux build and run: vips
+      `sudo apt install golang-go libvips libvips-dev`
 
 ### Configuration Files
 
