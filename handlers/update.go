@@ -18,7 +18,7 @@ import (
 )
 
 type UpdateHandler struct {
-	Pass     *com.PassConfig
+	Pass     *config.PassConfig
 	Cooldown time.Duration
 
 	mu       sync.Mutex
@@ -33,7 +33,7 @@ type UpdateHandler struct {
 }
 
 type RepopulateHandler struct {
-	Pass     *com.PassConfig
+	Pass     *config.PassConfig
 	Cooldown time.Duration
 
 	lastRun  time.Time
@@ -62,7 +62,7 @@ func (h *UpdateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Basic preflight checks
 	if h == nil || h.Pass == nil {
 		writeJSON(w, http.StatusInternalServerError, updateResp{
-			Message: "server misconfigured: nil AppConfig",
+			Message: "server misconfigured: nil PassConfig",
 			Step:    "preflight",
 		})
 		return
@@ -133,7 +133,7 @@ func (h *RepopulateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Basic preflight checks
 	if h == nil || h.Pass == nil {
 		writeJSON(w, http.StatusInternalServerError, updateResp{
-			Message: "server misconfigured: nil AppConfig",
+			Message: "server misconfigured: nil PassConfig",
 			Step:    "preflight",
 		})
 		return
@@ -242,7 +242,7 @@ func (h *UpdateHandler) runDBUpdate(ctx context.Context) error {
 	type result struct{ err error }
 	ch := make(chan result, 1)
 	go func() {
-		err := com.RunDBUpdate(false)
+		err := com.RunDBUpdate(h.Pass, false)
 		ch <- result{err}
 	}()
 	select {
@@ -366,7 +366,7 @@ func (h *RepopulateHandler) runDBRepopulate(ctx context.Context) error {
 	type result struct{ err error }
 	ch := make(chan result, 1)
 	go func() {
-		err := com.RunDBUpdate(true)
+		err := com.RunDBUpdate(h.Pass, true)
 		ch <- result{err}
 	}()
 	select {

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"github.com/gorilla/sessions"
@@ -25,7 +26,7 @@ var embeddedFiles embed.FS
 
 // Application holds all the application state and dependencies
 type Application struct {
-	//passConfig   *config.PassConfig
+	passConfig   *config.PassConfig
 	db           *sql.DB
 	anal         *sql.DB
 	localStore   *sql.DB
@@ -42,6 +43,12 @@ func NewApplication() (*Application, error) {
 
 	if err := app.loadConfig(); err != nil {
 		return nil, fmt.Errorf("failed to load config: %w", err)
+	}
+
+	app.passConfig = &config.PassConfig{
+		Composites: map[string]string{},
+		PassTypes:  map[string]config.PassTypeConfig{},
+		Passes:     config.PassesConfig{FolderIncludes: map[string]string{}},
 	}
 
 	if err := app.initializeStores(); err != nil {
@@ -89,17 +96,17 @@ func (app *Application) initializeStores() error {
 	var err error
 	dataDir := config.GetString("paths.data")
 
-	app.localStore, err = shared.OpenDatabase(config.GetString("paths.data") + "local_data.db")
+	app.localStore, err = shared.OpenDatabase(filepath.Join(dataDir, "local_data.db"))
 	if err != nil {
 		return fmt.Errorf("local data init: %w", err)
 	}
 
-	app.db, err = shared.OpenDatabase(dataDir + "image_metadata.db")
+	app.db, err = shared.OpenDatabase(filepath.Join(dataDir, "image_metadata.db"))
 	if err != nil {
 		return fmt.Errorf("database open: %w", err)
 	}
 
-	app.anal, err = shared.OpenDatabase(dataDir + "aggregateData.db")
+	app.anal, err = shared.OpenDatabase(filepath.Join(dataDir, "aggregateData.db"))
 	if err != nil {
 		return fmt.Errorf("analytics db open: %w", err)
 	}
@@ -121,7 +128,11 @@ func (app *Application) initializeStores() error {
 
 func (app *Application) runStartupTasks() error {
 	// Run database update
-	if err := com.RunDBUpdate(false); err != nil {
+	if err := com.OpenLocalData(); err != nil {
+		return fmt.Errorf("could not prepare databases %w", err)
+	}
+
+	if err := com.RunDBUpdate(app.passConfig, false); err != nil {
 		return fmt.Errorf("database update: %w", err)
 	}
 
@@ -205,7 +216,7 @@ func main() {
 		log.Printf("Startup warning: %v", err)
 	}
 
-	app.startStationProxy()
+	//app.startStationProxy()
 
 	if err := app.initializeAuthDB(); err != nil {
 		log.Fatal("failed to initialize auth: %w", err)

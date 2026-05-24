@@ -10,6 +10,31 @@ import (
 	"github.com/pelletier/go-toml/v2"
 )
 
+type ImageDirConfig struct {
+	IsFilled    bool   `toml:"isFilled"`
+	VPix        int    `toml:"vPix"`
+	Sensor      string `toml:"sensor"`
+	IsCorrected bool   `toml:"corrected"`
+	Composite   string `toml:"composite"`
+}
+
+type PassTypeConfig struct {
+	DatasetFile string
+	RawDataFile string
+	Downlink    string
+	ImageDirs   map[string]ImageDirConfig
+}
+
+type PassesConfig struct {
+	FolderIncludes map[string]string `toml:"folderincludes"`
+}
+
+type PassConfig struct {
+	Composites map[string]string         `toml:"composites"`
+	PassTypes  map[string]PassTypeConfig `toml:"passTypes"`
+	Passes     PassesConfig              `toml:"passes"`
+}
+
 type SettingsTree map[string]any
 type SettingsFlat map[string]any
 

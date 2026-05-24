@@ -1284,7 +1284,7 @@ func DeleteFolderInclude(db *sql.DB, ctx context.Context, prefix string) error {
 	return err
 }
 
-func SeedFromPassConfig(db *sql.DB, ctx context.Context, passCfg *PassConfig) error {
+func SeedFromPassConfig(db *sql.DB, ctx context.Context, passCfg *config.PassConfig) error {
 	if passCfg == nil {
 		return nil
 	}

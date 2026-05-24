@@ -50,33 +50,8 @@ type Dataset struct {
 	Timestamp float64 `json:"timestamp"`
 }
 
-type ImageDirConfig struct {
-	IsFilled    bool   `toml:"isFilled"`
-	VPix        int    `toml:"vPix"`
-	Sensor      string `toml:"sensor"`
-	IsCorrected bool   `toml:"corrected"`
-	Composite   string `toml:"composite"`
-}
-
-type PassTypeConfig struct {
-	DatasetFile string
-	RawDataFile string
-	Downlink    string
-	ImageDirs   map[string]ImageDirConfig
-}
-
-type PassesConfig struct {
-	FolderIncludes map[string]string `toml:"folderincludes"`
-}
-
-type PassConfig struct {
-	Composites map[string]string         `toml:"composites"`
-	PassTypes  map[string]PassTypeConfig `toml:"passTypes"`
-	Passes     PassesConfig              `toml:"passes"`
-}
-
 type updCtx struct {
-	passCfg       *PassConfig
+	passCfg       *config.PassConfig
 	db            *sql.DB
 	liveOutputDir string
 }
@@ -88,7 +63,7 @@ type existingPassData struct {
 
 // load PassConfig from prefs SQLite
 
-func loadPassConfigFromPrefs(ctx context.Context, prefsDBPath string) (*PassConfig, error) {
+func loadPassConfigFromPrefs(ctx context.Context, prefsDBPath string) (*config.PassConfig, error) {
 	if strings.TrimSpace(prefsDBPath) == "" {
 		return nil, errors.New("prefs db path empty")
 	}
@@ -106,10 +81,10 @@ func loadPassConfigFromPrefs(ctx context.Context, prefsDBPath string) (*PassConf
 		return nil, fmt.Errorf("prefs pragma: %w", err)
 	}
 
-	out := &PassConfig{
+	out := &config.PassConfig{
 		Composites: map[string]string{},
-		PassTypes:  map[string]PassTypeConfig{},
-		Passes:     PassesConfig{FolderIncludes: map[string]string{}},
+		PassTypes:  map[string]config.PassTypeConfig{},
+		Passes:     config.PassesConfig{FolderIncludes: map[string]string{}},
 	}
 
 	// composites
@@ -180,10 +155,10 @@ func loadPassConfigFromPrefs(ctx context.Context, prefsDBPath string) (*PassConf
 
 	// image_dir_rules per pass_type
 	for _, pr := range passRows {
-		pt := PassTypeConfig{
+		pt := config.PassTypeConfig{
 			DatasetFile: strings.TrimSpace(pr.datasetFile.String),
 			Downlink:    strings.TrimSpace(pr.downlink.String),
-			ImageDirs:   map[string]ImageDirConfig{},
+			ImageDirs:   map[string]config.ImageDirConfig{},
 		}
 		// If config.PassTypeConfig has RawDataFile, populate it:
 		pt.RawDataFile = strings.TrimSpace(pr.rawDataFile.String) // empty when column missing
@@ -230,7 +205,7 @@ func loadPassConfigFromPrefs(ctx context.Context, prefsDBPath string) (*PassConf
 				}
 			}
 
-			pt.ImageDirs[dir] = ImageDirConfig{
+			pt.ImageDirs[dir] = config.ImageDirConfig{
 				IsFilled:    isFilled != 0,
 				VPix:        vPix,
 				Sensor:      sensor,
@@ -458,7 +433,7 @@ func needsRescanFromMTime(latest time.Time, now time.Time) uint8 {
 // main logic
 
 // Returns: images, parsed dataset, datasetAbsPath (for reading only), downlink, rawDataRelPath (from config)
-func (c *updCtx) processPassType(passFolder string, passType PassTypeConfig) ([]Image, *Dataset, string, string, string, error) {
+func (c *updCtx) processPassType(passFolder string, passType config.PassTypeConfig) ([]Image, *Dataset, string, string, string, error) {
 	// DATASET: used for reading satellite/timestamp only; not stored in DB
 	var dataset Dataset
 	datasetAbsPath := ""
@@ -913,10 +888,9 @@ func (c *updCtx) processPasses(mode int8) error {
 }
 
 // entrypoint
-func RunDBUpdate(repopulate bool) error {
+func RunDBUpdate(passCfg *config.PassConfig, repopulate bool) error {
 	dataDir := config.GetString("paths.data")
 	liveDir := config.GetString("paths.live_output")
-	var passCfg *PassConfig
 	if strings.TrimSpace(dataDir) == "" {
 		return fmt.Errorf("RunDBUpdate: database.path missing")
 	}
@@ -964,7 +938,7 @@ func RunDBUpdate(repopulate bool) error {
 func RunDBMetadataUpdate() error {
 	dataDir := config.GetString("paths.data")
 	liveDir := config.GetString("paths.live_output")
-	var passCfg *PassConfig
+	var passCfg *config.PassConfig
 	if strings.TrimSpace(dataDir) == "" {
 		return fmt.Errorf("RunDBUpdate: database.path missing")
 	}
