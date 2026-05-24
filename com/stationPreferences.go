@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"OnlySats/com/shared"
+
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -76,10 +78,6 @@ type tblCol struct {
 	NotNull bool
 }
 
-type LocalDataStore struct {
-	db *sql.DB
-}
-
 type Message struct {
 	ID        int64     `json:"id"`
 	Title     string    `json:"title"`
@@ -97,60 +95,52 @@ type UserRow struct {
 
 // ---------- Open / Close / Migrate ----------
 
-func OpenLocalData(cfg *config.AppConfig) (*LocalDataStore, error) {
+func OpenLocalData(cfg *config.AppConfig) error {
 	if cfg == nil {
-		return nil, errors.New("nil config")
+		return errors.New("nil config")
 	}
 	dataDir := strings.TrimSpace(cfg.Paths.DataDir)
 	if dataDir == "" {
 		dataDir = "data"
 	}
 	if err := os.MkdirAll(dataDir, 0o755); err != nil {
-		return nil, fmt.Errorf("ensure data dir: %w", err)
+		return fmt.Errorf("ensure data dir: %w", err)
 	}
 	dbPath := filepath.Join(dataDir, "local_data.db")
 
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
-		return nil, fmt.Errorf("open local_data.db: %w", err)
+		return fmt.Errorf("open local_data.db: %w", err)
 	}
 	if _, err := db.Exec(`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA foreign_keys=ON;`); err != nil {
 		_ = db.Close()
-		return nil, fmt.Errorf("init pragmas: %w", err)
+		return fmt.Errorf("init pragmas: %w", err)
 	}
 
-	lds := &LocalDataStore{db: db}
-	if err := lds.migrateTables(); err != nil {
-		_ = lds.Close()
-		return nil, err
+	if err := migrateTables(db); err != nil {
+		_ = shared.CloseDatabase(db)
+		return err
 	}
-	if err := lds.migrateColumns("satdump", "log", "log INTEGER"); err != nil {
-		return nil, err
+	if err := migrateColumns(db, "satdump", "log", "log INTEGER"); err != nil {
+		return err
 	}
-	if _, err := lds.db.Exec(`UPDATE satdump SET log = 0 WHERE log IS NULL`); err != nil {
-		return nil, fmt.Errorf("backfill satdump.log: %w", err)
+	if _, err := db.Exec(`UPDATE satdump SET log = 0 WHERE log IS NULL`); err != nil {
+		return fmt.Errorf("backfill satdump.log: %w", err)
 	}
-	return lds, nil
+	return nil
 }
 
-func (s *LocalDataStore) Close() error {
-	if s == nil || s.db == nil {
-		return nil
-	}
-	return s.db.Close()
-}
-
-func (s *LocalDataStore) execDDL(stmts ...string) error {
+func execDDL(db *sql.DB, stmts ...string) error {
 	for i, q := range stmts {
-		if _, err := s.db.Exec(q); err != nil {
+		if _, err := db.Exec(q); err != nil {
 			return fmt.Errorf("ddl[%d] failed near start of: %.60s ... : %w", i, q, err)
 		}
 	}
 	return nil
 }
 
-func (s *LocalDataStore) columnExists(table, column string) (bool, error) {
-	rows, err := s.db.Query(`PRAGMA table_info(` + table + `);`)
+func columnExists(db *sql.DB, table, column string) (bool, error) {
+	rows, err := db.Query(`PRAGMA table_info(` + table + `);`)
 	if err != nil {
 		return false, err
 	}
@@ -178,8 +168,8 @@ func (s *LocalDataStore) columnExists(table, column string) (bool, error) {
 	return false, nil
 }
 
-func (s *LocalDataStore) migrateColumns(table, columnName, columnDef string) error {
-	exists, err := s.columnExists(table, columnName)
+func migrateColumns(db *sql.DB, table, columnName, columnDef string) error {
+	exists, err := columnExists(db, table, columnName)
 	if err != nil {
 		return err
 	}
@@ -187,14 +177,14 @@ func (s *LocalDataStore) migrateColumns(table, columnName, columnDef string) err
 		return nil
 	}
 	alter := `ALTER TABLE ` + table + ` ADD COLUMN ` + columnDef + `;`
-	if _, err := s.db.Exec(alter); err != nil {
+	if _, err := db.Exec(alter); err != nil {
 		return fmt.Errorf("add column %s.%s: %w", table, columnName, err)
 	}
 	return nil
 }
 
-func (s *LocalDataStore) migrateTables() error {
-	return s.execDDL(
+func migrateTables(db *sql.DB) error {
+	return execDDL(db,
 		`CREATE TABLE IF NOT EXISTS admin_notes (
 			id        INTEGER PRIMARY KEY AUTOINCREMENT,
 			title     TEXT NOT NULL,
@@ -309,7 +299,7 @@ func (s *LocalDataStore) migrateTables() error {
 
 // ---------- Admin Notes (CRUD) ----------
 
-func (s *LocalDataStore) AddNote(ctx context.Context, title, body string, ts time.Time) (int64, error) {
+func AddNote(db *sql.DB, ctx context.Context, title, body string, ts time.Time) (int64, error) {
 	if title == "" {
 		return 0, errors.New("title required")
 	}
@@ -319,7 +309,7 @@ func (s *LocalDataStore) AddNote(ctx context.Context, title, body string, ts tim
 	if ts.IsZero() {
 		ts = time.Now()
 	}
-	res, err := s.db.ExecContext(ctx, `INSERT INTO admin_notes (title, body, ts) VALUES (?, ?, ?)`,
+	res, err := db.ExecContext(ctx, `INSERT INTO admin_notes (title, body, ts) VALUES (?, ?, ?)`,
 		title, body, ts.Unix())
 	if err != nil {
 		return 0, err
@@ -327,10 +317,10 @@ func (s *LocalDataStore) AddNote(ctx context.Context, title, body string, ts tim
 	return res.LastInsertId()
 }
 
-func (s *LocalDataStore) GetNote(ctx context.Context, id int64) (*Note, error) {
+func GetNote(db *sql.DB, ctx context.Context, id int64) (*Note, error) {
 	var n Note
 	var unix int64
-	err := s.db.QueryRowContext(ctx, `SELECT id, title, body, ts FROM admin_notes WHERE id=?`, id).
+	err := db.QueryRowContext(ctx, `SELECT id, title, body, ts FROM admin_notes WHERE id=?`, id).
 		Scan(&n.ID, &n.Title, &n.Body, &unix)
 	if err != nil {
 		return nil, err
@@ -339,11 +329,11 @@ func (s *LocalDataStore) GetNote(ctx context.Context, id int64) (*Note, error) {
 	return &n, nil
 }
 
-func (s *LocalDataStore) ListNotes(ctx context.Context, limit, offset int) ([]Note, error) {
+func ListNotes(db *sql.DB, ctx context.Context, limit, offset int) ([]Note, error) {
 	if limit <= 0 {
 		limit = 50
 	}
-	rows, err := s.db.QueryContext(ctx, `
+	rows, err := db.QueryContext(ctx, `
 SELECT id, title, body, ts
 FROM admin_notes
 ORDER BY ts DESC, id DESC
@@ -366,14 +356,14 @@ LIMIT ? OFFSET ?`, limit, offset)
 	return out, rows.Err()
 }
 
-func (s *LocalDataStore) UpdateNote(ctx context.Context, id int64, title, body string) error {
-	_, err := s.db.ExecContext(ctx, `UPDATE admin_notes SET title=?, body=? WHERE id=?`, title, body, id)
+func UpdateNote(db *sql.DB, ctx context.Context, id int64, title, body string) error {
+	_, err := db.ExecContext(ctx, `UPDATE admin_notes SET title=?, body=? WHERE id=?`, title, body, id)
 	return err
 }
 
 // Helper on the store to delete by ID with "0 rows" clarity
-func (s *LocalDataStore) DeleteNoteByID(ctx context.Context, id int64) error {
-	res, err := s.db.ExecContext(ctx, `DELETE FROM admin_notes WHERE id=?`, id)
+func DeleteNoteByID(db *sql.DB, ctx context.Context, id int64) error {
+	res, err := db.ExecContext(ctx, `DELETE FROM admin_notes WHERE id=?`, id)
 	if err != nil {
 		return err
 	}
@@ -383,8 +373,8 @@ func (s *LocalDataStore) DeleteNoteByID(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (s *LocalDataStore) DeleteNoteByTimestamp(ctx context.Context, ts int64) (int64, error) {
-	res, err := s.db.ExecContext(ctx, `DELETE FROM admin_notes WHERE ts=?`, ts)
+func DeleteNoteByTimestamp(db *sql.DB, ctx context.Context, ts int64) (int64, error) {
+	res, err := db.ExecContext(ctx, `DELETE FROM admin_notes WHERE ts=?`, ts)
 	if err != nil {
 		return 0, err
 	}
@@ -394,18 +384,18 @@ func (s *LocalDataStore) DeleteNoteByTimestamp(ctx context.Context, ts int64) (i
 
 // ---------- About Page (body, images, meta KV) ----------
 
-func (s *LocalDataStore) SetAboutBody(ctx context.Context, body string) error {
+func SetAboutBody(db *sql.DB, ctx context.Context, body string) error {
 	now := time.Now().Unix()
-	_, err := s.db.ExecContext(ctx, `
+	_, err := db.ExecContext(ctx, `
 INSERT INTO about_body (id, body, updated) VALUES (1, ?, ?)
 ON CONFLICT(id) DO UPDATE SET body=excluded.body, updated=excluded.updated`,
 		body, now)
 	return err
 }
 
-func (s *LocalDataStore) GetAboutBody(ctx context.Context) (body string, updated time.Time, err error) {
+func GetAboutBody(db *sql.DB, ctx context.Context) (body string, updated time.Time, err error) {
 	var unix sql.NullInt64
-	err = s.db.QueryRowContext(ctx, `SELECT body, updated FROM about_body WHERE id=1`).Scan(&body, &unix)
+	err = db.QueryRowContext(ctx, `SELECT body, updated FROM about_body WHERE id=1`).Scan(&body, &unix)
 	if err == sql.ErrNoRows {
 		return "", time.Time{}, nil
 	}
@@ -418,8 +408,8 @@ func (s *LocalDataStore) GetAboutBody(ctx context.Context) (body string, updated
 	return
 }
 
-func (s *LocalDataStore) tableCols(ctx context.Context, table string) (map[string]tblCol, error) {
-	rows, err := s.db.QueryContext(ctx, fmt.Sprintf(`PRAGMA table_info(%s)`, table))
+func tableCols(db *sql.DB, ctx context.Context, table string) (map[string]tblCol, error) {
+	rows, err := db.QueryContext(ctx, fmt.Sprintf(`PRAGMA table_info(%s)`, table))
 	if err != nil {
 		return nil, err
 	}
@@ -440,7 +430,8 @@ func (s *LocalDataStore) tableCols(ctx context.Context, table string) (map[strin
 
 // inserts image bytes into about_images, adapting to the actual schema.
 // Works if `path` was dropped, is nullable, or is NOT NULL
-func (s *LocalDataStore) AddAboutImageBlobFlexible(
+func AddAboutImageBlobFlexible(
+	db *sql.DB,
 	ctx context.Context,
 	data []byte,
 	mime string,
@@ -451,7 +442,7 @@ func (s *LocalDataStore) AddAboutImageBlobFlexible(
 	if len(data) == 0 || mime == "" {
 		return 0, errors.New("empty image or mime")
 	}
-	cols, err := s.tableCols(ctx, "about_images")
+	cols, err := tableCols(db, ctx, "about_images")
 	if err != nil {
 		return 0, err
 	}
@@ -510,7 +501,7 @@ func (s *LocalDataStore) AddAboutImageBlobFlexible(
 		strings.Join(place, ", "),
 	)
 
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -543,8 +534,8 @@ func (s *LocalDataStore) AddAboutImageBlobFlexible(
 	return id, nil
 }
 
-func (s *LocalDataStore) GetAboutImageBlob(ctx context.Context, id int64) (data []byte, mime string, createdAt int64, err error) {
-	err = s.db.QueryRowContext(ctx, `
+func GetAboutImageBlob(db *sql.DB, ctx context.Context, id int64) (data []byte, mime string, createdAt int64, err error) {
+	err = db.QueryRowContext(ctx, `
 SELECT data, mime, IFNULL(created_at, 0)
 FROM about_images
 WHERE id = ?
@@ -555,24 +546,24 @@ WHERE id = ?
 	return
 }
 
-func (s *LocalDataStore) RemoveAboutImage(ctx context.Context, id int64) error {
-	_, err := s.db.ExecContext(ctx, `DELETE FROM about_images WHERE id=?`, id)
+func RemoveAboutImage(db *sql.DB, ctx context.Context, id int64) error {
+	_, err := db.ExecContext(ctx, `DELETE FROM about_images WHERE id=?`, id)
 	return err
 }
 
-func (s *LocalDataStore) ListAboutImages(ctx context.Context) ([]AboutImage, error) {
-	cols, _ := s.tableCols(ctx, "about_images")
+func ListAboutImages(db *sql.DB, ctx context.Context) ([]AboutImage, error) {
+	cols, _ := tableCols(db, ctx, "about_images")
 	_, hasPath := cols["path"]
 
 	var rows *sql.Rows
 	var err error
 	if hasPath {
-		rows, err = s.db.QueryContext(ctx, `
+		rows, err = db.QueryContext(ctx, `
 SELECT id, path, caption, sort
 FROM about_images
 ORDER BY sort ASC, id ASC`)
 	} else {
-		rows, err = s.db.QueryContext(ctx, `
+		rows, err = db.QueryContext(ctx, `
 SELECT id, caption, sort
 FROM about_images
 ORDER BY sort ASC, id ASC`)
@@ -603,23 +594,23 @@ ORDER BY sort ASC, id ASC`)
 	return out, rows.Err()
 }
 
-func (s *LocalDataStore) SetAboutMeta(ctx context.Context, key, value string) error {
+func SetAboutMeta(db *sql.DB, ctx context.Context, key, value string) error {
 	if strings.TrimSpace(key) == "" {
 		return errors.New("key required")
 	}
-	_, err := s.db.ExecContext(ctx, `
+	_, err := db.ExecContext(ctx, `
 INSERT INTO about_meta (key, value) VALUES (?, ?)
 ON CONFLICT(key) DO UPDATE SET value=excluded.value`, key, value)
 	return err
 }
 
-func (s *LocalDataStore) DeleteAboutMeta(ctx context.Context, key string) error {
-	_, err := s.db.ExecContext(ctx, `DELETE FROM about_meta WHERE key=?`, key)
+func DeleteAboutMeta(db *sql.DB, ctx context.Context, key string) error {
+	_, err := db.ExecContext(ctx, `DELETE FROM about_meta WHERE key=?`, key)
 	return err
 }
 
-func (s *LocalDataStore) GetAllAboutMeta(ctx context.Context) (map[string]string, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT key, value FROM about_meta ORDER BY key`)
+func GetAllAboutMeta(db *sql.DB, ctx context.Context) (map[string]string, error) {
+	rows, err := db.QueryContext(ctx, `SELECT key, value FROM about_meta ORDER BY key`)
 	if err != nil {
 		return nil, err
 	}
@@ -636,12 +627,12 @@ func (s *LocalDataStore) GetAllAboutMeta(ctx context.Context) (map[string]string
 	return out, rows.Err()
 }
 
-func (s *LocalDataStore) DeleteAboutBody(ctx context.Context) error {
-	_, err := s.db.ExecContext(ctx, `DELETE FROM about_body WHERE id=1`)
+func DeleteAboutBody(db *sql.DB, ctx context.Context) error {
+	_, err := db.ExecContext(ctx, `DELETE FROM about_body WHERE id=1`)
 	return err
 }
 
-func (s *LocalDataStore) UpdateAboutImage(ctx context.Context, id int64, path *string, caption *string, sort *int) error {
+func UpdateAboutImage(db *sql.DB, ctx context.Context, id int64, path *string, caption *string, sort *int) error {
 	// Build a dynamic UPDATE that only touches provided fields.
 	type part struct {
 		sql string
@@ -672,31 +663,31 @@ func (s *LocalDataStore) UpdateAboutImage(ctx context.Context, id int64, path *s
 	q += " WHERE id = ?"
 	args = append(args, id)
 
-	_, err := s.db.ExecContext(ctx, q, args...)
+	_, err := db.ExecContext(ctx, q, args...)
 	return err
 }
 
 // ---------- Satdump (CRUD) ----------
 
 // insert a new row. Address may be empty; port may be 0.
-func (s *LocalDataStore) CreateSatdump(ctx context.Context, name, address string, port int, log int) error {
+func CreateSatdump(db *sql.DB, ctx context.Context, name, address string, port int, log int) error {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return errors.New("name required")
 	}
-	_, err := s.db.ExecContext(ctx, `
+	_, err := db.ExecContext(ctx, `
 		INSERT INTO satdump (name, address, port, log) VALUES (?, ?, ?, ?)
 	`, name, strings.TrimSpace(address), port, log)
 	return err
 }
 
 // insert or updates by primary key (name).
-func (s *LocalDataStore) UpsertSatdump(ctx context.Context, name, address string, port int, log int) error {
+func UpsertSatdump(db *sql.DB, ctx context.Context, name, address string, port int, log int) error {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return errors.New("name required")
 	}
-	_, err := s.db.ExecContext(ctx, `
+	_, err := db.ExecContext(ctx, `
 		INSERT INTO satdump (name, address, port, log) VALUES (?, ?, ?, ?)
 		ON CONFLICT(name) DO UPDATE SET address=excluded.address, port=excluded.port, log=excluded.log
 	`, name, strings.TrimSpace(address), port, log)
@@ -704,10 +695,10 @@ func (s *LocalDataStore) UpsertSatdump(ctx context.Context, name, address string
 }
 
 // fetch a single host by name.
-func (s *LocalDataStore) GetSatdump(ctx context.Context, name string) (*Satdump, error) {
+func GetSatdump(db *sql.DB, ctx context.Context, name string) (*Satdump, error) {
 	var row Satdump
 	var addr sql.NullString
-	err := s.db.QueryRowContext(ctx, `
+	err := db.QueryRowContext(ctx, `
 		SELECT name,
 		       address,
 		       port,
@@ -725,8 +716,8 @@ func (s *LocalDataStore) GetSatdump(ctx context.Context, name string) (*Satdump,
 }
 
 // return all hosts ordered by name.
-func (s *LocalDataStore) ListSatdump(ctx context.Context) ([]Satdump, error) {
-	rows, err := s.db.QueryContext(ctx, `
+func ListSatdump(db *sql.DB, ctx context.Context) ([]Satdump, error) {
+	rows, err := db.QueryContext(ctx, `
 		SELECT name,
 		       address,
 		       port,
@@ -754,7 +745,8 @@ func (s *LocalDataStore) ListSatdump(ctx context.Context) ([]Satdump, error) {
 	return out, rows.Err()
 }
 
-func (s *LocalDataStore) UpdateSatdump(
+func UpdateSatdump(
+	db *sql.DB,
 	ctx context.Context,
 	oldName, newName string,
 	addrPtr *string,
@@ -762,7 +754,7 @@ func (s *LocalDataStore) UpdateSatdump(
 	logPtr *int,
 ) error {
 
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -797,8 +789,8 @@ func (s *LocalDataStore) UpdateSatdump(
 		return err
 	}
 
-	if newName != oldName && s.db != nil {
-		if _, err := s.db.ExecContext(ctx,
+	if newName != oldName && db != nil {
+		if _, err := db.ExecContext(ctx,
 			`UPDATE satdump_readings SET instance=? WHERE instance=?`,
 			newName, oldName,
 		); err != nil {
@@ -809,8 +801,8 @@ func (s *LocalDataStore) UpdateSatdump(
 	return tx.Commit()
 }
 
-func (s *LocalDataStore) DeleteSatdump(ctx context.Context, name string) error {
-	res, err := s.db.ExecContext(ctx, `
+func DeleteSatdump(db *sql.DB, ctx context.Context, name string) error {
+	res, err := db.ExecContext(ctx, `
 		DELETE FROM satdump WHERE name = ?
 	`, strings.TrimSpace(name))
 	if err != nil {
@@ -822,8 +814,8 @@ func (s *LocalDataStore) DeleteSatdump(ctx context.Context, name string) error {
 	return nil
 }
 
-func (s *LocalDataStore) ListSatdumpLoggingEnabled(ctx context.Context) ([]Satdump, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT name, address, port, log FROM satdump WHERE IFNULL(log,0) != 0 ORDER BY name`)
+func ListSatdumpLoggingEnabled(db *sql.DB, ctx context.Context) ([]Satdump, error) {
+	rows, err := db.QueryContext(ctx, `SELECT name, address, port, log FROM satdump WHERE IFNULL(log,0) != 0 ORDER BY name`)
 	if err != nil {
 		return nil, err
 	}
@@ -845,25 +837,25 @@ func (s *LocalDataStore) ListSatdumpLoggingEnabled(ctx context.Context) ([]Satdu
 
 // ---------- Color Codes (CSS variables) ----------
 
-func (s *LocalDataStore) SetColor(ctx context.Context, variable, value string) error {
+func SetColor(db *sql.DB, ctx context.Context, variable, value string) error {
 	variable = strings.TrimSpace(variable)
 	value = strings.TrimSpace(value)
 	if variable == "" {
 		return errors.New("variable required")
 	}
-	_, err := s.db.ExecContext(ctx, `
+	_, err := db.ExecContext(ctx, `
 INSERT INTO color_codes (var, value) VALUES (?, ?)
 ON CONFLICT(var) DO UPDATE SET value=excluded.value`, variable, value)
 	return err
 }
 
-func (s *LocalDataStore) DeleteColor(ctx context.Context, variable string) error {
-	_, err := s.db.ExecContext(ctx, `DELETE FROM color_codes WHERE var=?`, strings.TrimSpace(variable))
+func DeleteColor(db *sql.DB, ctx context.Context, variable string) error {
+	_, err := db.ExecContext(ctx, `DELETE FROM color_codes WHERE var=?`, strings.TrimSpace(variable))
 	return err
 }
 
-func (s *LocalDataStore) GetColors(ctx context.Context) (map[string]string, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT var, value FROM color_codes`)
+func GetColors(db *sql.DB, ctx context.Context) (map[string]string, error) {
+	rows, err := db.QueryContext(ctx, `SELECT var, value FROM color_codes`)
 	if err != nil {
 		return nil, err
 	}
@@ -881,8 +873,8 @@ func (s *LocalDataStore) GetColors(ctx context.Context) (map[string]string, erro
 }
 
 // return the colors stylesheet.
-func (s *LocalDataStore) GenerateColorsCSS(ctx context.Context) (string, error) {
-	kv, err := s.GetColors(ctx)
+func GenerateColorsCSS(db *sql.DB, ctx context.Context) (string, error) {
+	kv, err := GetColors(db, ctx)
 	if err != nil {
 		return "", err
 	}
@@ -909,24 +901,24 @@ func (s *LocalDataStore) GenerateColorsCSS(ctx context.Context) (string, error) 
 
 // ---------- App Settings (misc KV that don't need to live in TOML) ----------
 
-func (s *LocalDataStore) SetSetting(ctx context.Context, key, value string) error {
-	if s == nil || s.db == nil {
-		return errors.New("store not initialized")
+func SetSetting(db *sql.DB, ctx context.Context, key, value string) error {
+	if db == nil {
+		return errors.New("databased is nil")
 	}
 	key = strings.TrimSpace(key)
 	if key == "" {
 		return errors.New("key required")
 	}
-	_, err := s.db.ExecContext(ctx, `
+	_, err := db.ExecContext(ctx, `
 		INSERT INTO app_settings (key, value) VALUES (?, ?)
 		ON CONFLICT(key) DO UPDATE SET value=excluded.value
 	`, key, value)
 	return err
 }
 
-func (s *LocalDataStore) GetSetting(ctx context.Context, key string) (string, error) {
+func GetSetting(db *sql.DB, ctx context.Context, key string) (string, error) {
 	var v sql.NullString
-	if err := s.db.QueryRowContext(ctx, `SELECT value FROM app_settings WHERE key=?`, strings.TrimSpace(key)).Scan(&v); err != nil {
+	if err := db.QueryRowContext(ctx, `SELECT value FROM app_settings WHERE key=?`, strings.TrimSpace(key)).Scan(&v); err != nil {
 		if err == sql.ErrNoRows {
 			return "", nil
 		}
@@ -938,13 +930,13 @@ func (s *LocalDataStore) GetSetting(ctx context.Context, key string) (string, er
 	return "", nil
 }
 
-func (s *LocalDataStore) DeleteSetting(ctx context.Context, key string) error {
-	_, err := s.db.ExecContext(ctx, `DELETE FROM app_settings WHERE key=?`, strings.TrimSpace(key))
+func DeleteSetting(db *sql.DB, ctx context.Context, key string) error {
+	_, err := db.ExecContext(ctx, `DELETE FROM app_settings WHERE key=?`, strings.TrimSpace(key))
 	return err
 }
 
-func (s *LocalDataStore) ListSettings(ctx context.Context) (map[string]string, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT key, value FROM app_settings ORDER BY key`)
+func ListSettings(db *sql.DB, ctx context.Context) (map[string]string, error) {
+	rows, err := db.QueryContext(ctx, `SELECT key, value FROM app_settings ORDER BY key`)
 	if err != nil {
 		return nil, err
 	}
@@ -963,21 +955,21 @@ func (s *LocalDataStore) ListSettings(ctx context.Context) (map[string]string, e
 
 // ---------- Composites and Pass Templates ----------
 
-func (s *LocalDataStore) UpsertComposite(ctx context.Context, key, name string, enabled bool) error {
+func UpsertComposite(db *sql.DB, ctx context.Context, key, name string, enabled bool) error {
 	key = strings.TrimSpace(key)
 	name = strings.TrimSpace(name)
 	if key == "" || name == "" {
 		return errors.New("key and name required")
 	}
-	_, err := s.db.ExecContext(ctx, `
+	_, err := db.ExecContext(ctx, `
 INSERT INTO composites (key, label, enabled) VALUES (?, ?, ?)
 ON CONFLICT(key) DO UPDATE SET label=excluded.label, enabled=excluded.enabled
 `, key, name, boolToInt(enabled))
 	return err
 }
 
-func (s *LocalDataStore) GetComposite(ctx context.Context, key string) (*Composite, error) {
-	row := s.db.QueryRowContext(ctx, `SELECT key, label, enabled FROM composites WHERE key=?`, strings.TrimSpace(key))
+func GetComposite(db *sql.DB, ctx context.Context, key string) (*Composite, error) {
+	row := db.QueryRowContext(ctx, `SELECT key, label, enabled FROM composites WHERE key=?`, strings.TrimSpace(key))
 	var c Composite
 	var en int
 	if err := row.Scan(&c.Key, &c.Name, &en); err != nil {
@@ -987,15 +979,13 @@ func (s *LocalDataStore) GetComposite(ctx context.Context, key string) (*Composi
 	return &c, nil
 }
 
-func (s *LocalDataStore) ListConfiguredComposites(
-	ctx context.Context,
-) ([]Composite, error) {
+func ListConfiguredComposites(db *sql.DB, ctx context.Context) ([]Composite, error) {
 	const q = `
 SELECT key, label, enabled
 FROM composites
 ORDER BY key;
 `
-	rows, err := s.db.QueryContext(ctx, q)
+	rows, err := db.QueryContext(ctx, q)
 	if err != nil {
 		return nil, err
 	}
@@ -1014,9 +1004,7 @@ ORDER BY key;
 	return out, rows.Err()
 }
 
-func (s *LocalDataStore) ListRuleComposites(
-	ctx context.Context,
-) ([]Composite, error) {
+func ListRuleComposites(db *sql.DB, ctx context.Context) ([]Composite, error) {
 	const q = `
 SELECT DISTINCT
     composite AS key,
@@ -1025,7 +1013,7 @@ SELECT DISTINCT
 FROM image_dir_rules
 ORDER BY composite;
 `
-	rows, err := s.db.QueryContext(ctx, q)
+	rows, err := db.QueryContext(ctx, q)
 	if err != nil {
 		return nil, err
 	}
@@ -1044,19 +1032,28 @@ ORDER BY composite;
 	return out, rows.Err()
 }
 
-func (s *LocalDataStore) DeleteComposite(ctx context.Context, key string) error {
-	_, err := s.db.ExecContext(ctx, `DELETE FROM composites WHERE key=?`, strings.TrimSpace(key))
+func DeleteComposite(db *sql.DB, ctx context.Context, key string) error {
+	_, err := db.ExecContext(ctx, `DELETE FROM composites WHERE key=?`, strings.TrimSpace(key))
 	return err
 }
 
 // ---------- Pass Types (CRUD) ----------
 
-func (s *LocalDataStore) UpsertPassType(ctx context.Context, code, datasetFile, rawdataFile, downlink string) (int64, error) {
+func getPassTypeIDByCode(db *sql.DB, ctx context.Context, code string) (int64, error) {
+	var id int64
+	err := db.QueryRowContext(ctx, `SELECT id FROM pass_types WHERE code=?`, strings.TrimSpace(code)).Scan(&id)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
+func UpsertPassType(db *sql.DB, ctx context.Context, code, datasetFile, rawdataFile, downlink string) (int64, error) {
 	code = strings.TrimSpace(code)
 	if code == "" {
 		return 0, errors.New("code required")
 	}
-	_, err := s.db.ExecContext(ctx, `
+	_, err := db.ExecContext(ctx, `
 INSERT INTO pass_types (code, dataset_file, rawdata_file, downlink)
 VALUES (?, ?, ?, ?)
 ON CONFLICT(code) DO UPDATE SET dataset_file=excluded.dataset_file, rawdata_file=excluded.rawdata_file, downlink=excluded.downlink
@@ -1064,21 +1061,12 @@ ON CONFLICT(code) DO UPDATE SET dataset_file=excluded.dataset_file, rawdata_file
 	if err != nil {
 		return 0, err
 	}
-	return s.getPassTypeIDByCode(ctx, code)
+	return getPassTypeIDByCode(db, ctx, code)
 }
 
-func (s *LocalDataStore) getPassTypeIDByCode(ctx context.Context, code string) (int64, error) {
-	var id int64
-	err := s.db.QueryRowContext(ctx, `SELECT id FROM pass_types WHERE code=?`, strings.TrimSpace(code)).Scan(&id)
-	if err != nil {
-		return 0, err
-	}
-	return id, nil
-}
-
-func (s *LocalDataStore) GetPassTypeByCode(ctx context.Context, code string) (*PassType, error) {
+func GetPassTypeByCode(db *sql.DB, ctx context.Context, code string) (*PassType, error) {
 	var p PassType
-	err := s.db.QueryRowContext(ctx, `
+	err := db.QueryRowContext(ctx, `
 SELECT id, code, dataset_file, rawdata_file, downlink FROM pass_types WHERE code=?`, strings.TrimSpace(code)).
 		Scan(&p.ID, &p.Code, &p.DatasetFile, &p.RawDataFile, &p.Downlink)
 	if err != nil {
@@ -1087,9 +1075,9 @@ SELECT id, code, dataset_file, rawdata_file, downlink FROM pass_types WHERE code
 	return &p, nil
 }
 
-func (s *LocalDataStore) GetPassTypeByID(ctx context.Context, id int64) (*PassType, error) {
+func GetPassTypeByID(db *sql.DB, ctx context.Context, id int64) (*PassType, error) {
 	var p PassType
-	err := s.db.QueryRowContext(ctx, `
+	err := db.QueryRowContext(ctx, `
 SELECT id, code, dataset_file, rawdata_file, downlink FROM pass_types WHERE id=?`, id).
 		Scan(&p.ID, &p.Code, &p.DatasetFile, &p.RawDataFile, &p.Downlink)
 	if err != nil {
@@ -1098,8 +1086,8 @@ SELECT id, code, dataset_file, rawdata_file, downlink FROM pass_types WHERE id=?
 	return &p, nil
 }
 
-func (s *LocalDataStore) ListPassTypes(ctx context.Context) ([]PassType, error) {
-	rows, err := s.db.QueryContext(ctx, `
+func ListPassTypes(db *sql.DB, ctx context.Context) ([]PassType, error) {
+	rows, err := db.QueryContext(ctx, `
 SELECT id, code, dataset_file, rawdata_file, downlink FROM pass_types ORDER BY code`)
 	if err != nil {
 		return nil, err
@@ -1117,12 +1105,12 @@ SELECT id, code, dataset_file, rawdata_file, downlink FROM pass_types ORDER BY c
 	return out, rows.Err()
 }
 
-func (s *LocalDataStore) DeletePassType(ctx context.Context, code string) error {
+func DeletePassType(db *sql.DB, ctx context.Context, code string) error {
 	code = strings.TrimSpace(code)
 	if code == "" {
 		return errors.New("code required")
 	}
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -1151,13 +1139,24 @@ func (s *LocalDataStore) DeletePassType(ctx context.Context, code string) error 
 
 // ---------- Image Dir Rules (CRUD) ----------
 
-func (s *LocalDataStore) UpsertImageDirRule(ctx context.Context, passTypeCode, dirName, sensor string, isFilled bool, vPix int, isCorrected bool, composite string) (int64, error) {
-	ptID, err := s.getPassTypeIDByCode(ctx, passTypeCode)
+func getImageDirRuleID(db *sql.DB, ctx context.Context, passTypeID int64, dirName string) (int64, error) {
+	var id int64
+	err := db.QueryRowContext(ctx, `
+SELECT id FROM image_dir_rules WHERE pass_type_id=? AND dir_name=?`, passTypeID, dirName).
+		Scan(&id)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
+func UpsertImageDirRule(db *sql.DB, ctx context.Context, passTypeCode, dirName, sensor string, isFilled bool, vPix int, isCorrected bool, composite string) (int64, error) {
+	ptID, err := getPassTypeIDByCode(db, ctx, passTypeCode)
 	if err != nil {
 		return 0, fmt.Errorf("pass type not found: %w", err)
 	}
 
-	res, err := s.db.ExecContext(ctx, `
+	res, err := db.ExecContext(ctx, `
 INSERT INTO image_dir_rules (pass_type_id, dir_name, sensor, is_filled, v_pix, is_corrected, composite)
 VALUES (?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(pass_type_id, dir_name) DO UPDATE
@@ -1173,28 +1172,17 @@ ON CONFLICT(pass_type_id, dir_name) DO UPDATE
 	id, _ := res.LastInsertId()
 	if id == 0 {
 		// ON CONFLICT update path; fetch id
-		return s.getImageDirRuleID(ctx, ptID, dirName)
+		return getImageDirRuleID(db, ctx, ptID, dirName)
 	}
 	return id, nil
 }
 
-func (s *LocalDataStore) getImageDirRuleID(ctx context.Context, passTypeID int64, dirName string) (int64, error) {
-	var id int64
-	err := s.db.QueryRowContext(ctx, `
-SELECT id FROM image_dir_rules WHERE pass_type_id=? AND dir_name=?`, passTypeID, dirName).
-		Scan(&id)
-	if err != nil {
-		return 0, err
-	}
-	return id, nil
-}
-
-func (s *LocalDataStore) ListImageDirRules(ctx context.Context, passTypeCode string) ([]ImageDirRule, error) {
-	ptID, err := s.getPassTypeIDByCode(ctx, passTypeCode)
+func ListImageDirRules(db *sql.DB, ctx context.Context, passTypeCode string) ([]ImageDirRule, error) {
+	ptID, err := getPassTypeIDByCode(db, ctx, passTypeCode)
 	if err != nil {
 		return nil, fmt.Errorf("pass type not found: %w", err)
 	}
-	rows, err := s.db.QueryContext(ctx, `
+	rows, err := db.QueryContext(ctx, `
 SELECT id, pass_type_id, dir_name, sensor, is_filled, v_pix, is_corrected, composite
 FROM image_dir_rules
 WHERE pass_type_id=?
@@ -1218,15 +1206,15 @@ ORDER BY dir_name`, ptID)
 	return out, rows.Err()
 }
 
-func (s *LocalDataStore) DeleteImageDirRule(ctx context.Context, passTypeCode, dirName string) error {
-	ptID, err := s.getPassTypeIDByCode(ctx, passTypeCode)
+func DeleteImageDirRule(db *sql.DB, ctx context.Context, passTypeCode, dirName string) error {
+	ptID, err := getPassTypeIDByCode(db, ctx, passTypeCode)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil
 		}
 		return err
 	}
-	_, err = s.db.ExecContext(ctx, `
+	_, err = db.ExecContext(ctx, `
 DELETE FROM image_dir_rules WHERE pass_type_id=? AND dir_name=?`,
 		ptID, dirName)
 	if err != nil {
@@ -1237,16 +1225,16 @@ DELETE FROM image_dir_rules WHERE pass_type_id=? AND dir_name=?`,
 
 // ---------- Folder Includes (CRUD) ----------
 
-func (s *LocalDataStore) UpsertFolderInclude(ctx context.Context, prefix, passTypeCode string) (int64, error) {
+func UpsertFolderInclude(db *sql.DB, ctx context.Context, prefix, passTypeCode string) (int64, error) {
 	prefix = strings.TrimSpace(prefix)
 	if prefix == "" {
 		return 0, errors.New("prefix required")
 	}
-	ptID, err := s.getPassTypeIDByCode(ctx, passTypeCode)
+	ptID, err := getPassTypeIDByCode(db, ctx, passTypeCode)
 	if err != nil {
 		return 0, fmt.Errorf("pass type not found: %w", err)
 	}
-	res, err := s.db.ExecContext(ctx, `
+	res, err := db.ExecContext(ctx, `
 INSERT INTO folder_includes (prefix, pass_type_id)
 VALUES (?, ?)
 ON CONFLICT(prefix) DO UPDATE SET pass_type_id=excluded.pass_type_id
@@ -1257,22 +1245,22 @@ ON CONFLICT(prefix) DO UPDATE SET pass_type_id=excluded.pass_type_id
 	id, _ := res.LastInsertId()
 	if id == 0 {
 		// updated existing; fetch id
-		return s.getFolderIncludeID(ctx, prefix)
+		return getFolderIncludeID(db, ctx, prefix)
 	}
 	return id, nil
 }
 
-func (s *LocalDataStore) getFolderIncludeID(ctx context.Context, prefix string) (int64, error) {
+func getFolderIncludeID(db *sql.DB, ctx context.Context, prefix string) (int64, error) {
 	var id int64
-	err := s.db.QueryRowContext(ctx, `SELECT id FROM folder_includes WHERE prefix=?`, prefix).Scan(&id)
+	err := db.QueryRowContext(ctx, `SELECT id FROM folder_includes WHERE prefix=?`, prefix).Scan(&id)
 	if err != nil {
 		return 0, err
 	}
 	return id, nil
 }
 
-func (s *LocalDataStore) ListFolderIncludes(ctx context.Context) ([]FolderInclude, error) {
-	rows, err := s.db.QueryContext(ctx, `
+func ListFolderIncludes(db *sql.DB, ctx context.Context) ([]FolderInclude, error) {
+	rows, err := db.QueryContext(ctx, `
 SELECT f.id, f.prefix, f.pass_type_id, p.code
 FROM folder_includes f
 JOIN pass_types p ON p.id = f.pass_type_id
@@ -1293,35 +1281,35 @@ ORDER BY f.prefix`)
 	return out, rows.Err()
 }
 
-func (s *LocalDataStore) DeleteFolderInclude(ctx context.Context, prefix string) error {
-	_, err := s.db.ExecContext(ctx, `DELETE FROM folder_includes WHERE prefix=?`, strings.TrimSpace(prefix))
+func DeleteFolderInclude(db *sql.DB, ctx context.Context, prefix string) error {
+	_, err := db.ExecContext(ctx, `DELETE FROM folder_includes WHERE prefix=?`, strings.TrimSpace(prefix))
 	return err
 }
 
-func (s *LocalDataStore) SeedFromPassConfig(ctx context.Context, passCfg *config.PassConfig) error {
+func SeedFromPassConfig(db *sql.DB, ctx context.Context, passCfg *config.PassConfig) error {
 	if passCfg == nil {
 		return nil
 	}
 	// composites
 	for k, v := range passCfg.Composites {
-		if err := s.UpsertComposite(ctx, k, v, true); err != nil {
+		if err := UpsertComposite(db, ctx, k, v, true); err != nil {
 			return err
 		}
 	}
 	// pass types + image dir rules
 	for code, pt := range passCfg.PassTypes {
-		if _, err := s.UpsertPassType(ctx, code, pt.DatasetFile, pt.RawDataFile, pt.Downlink); err != nil {
+		if _, err := UpsertPassType(db, ctx, code, pt.DatasetFile, pt.RawDataFile, pt.Downlink); err != nil {
 			return err
 		}
 		for dir, rule := range pt.ImageDirs {
-			if _, err := s.UpsertImageDirRule(ctx, code, dir, rule.Sensor, rule.IsFilled, rule.VPix, rule.IsCorrected, rule.Composite); err != nil {
+			if _, err := UpsertImageDirRule(db, ctx, code, dir, rule.Sensor, rule.IsFilled, rule.VPix, rule.IsCorrected, rule.Composite); err != nil {
 				return err
 			}
 		}
 	}
 	// folder includes
 	for prefix, code := range passCfg.Passes.FolderIncludes {
-		if _, err := s.UpsertFolderInclude(ctx, prefix, code); err != nil {
+		if _, err := UpsertFolderInclude(db, ctx, prefix, code); err != nil {
 			return err
 		}
 	}
@@ -1330,7 +1318,7 @@ func (s *LocalDataStore) SeedFromPassConfig(ctx context.Context, passCfg *config
 
 // ------------ Users CRUD-----------
 
-func (s *LocalDataStore) CreateUser(ctx context.Context, username string, level int, plainPassword string) (int64, error) {
+func CreateUser(db *sql.DB, ctx context.Context, username string, level int, plainPassword string) (int64, error) {
 	username = strings.TrimSpace(username)
 	if username == "" {
 		return 0, errors.New("username required")
@@ -1345,7 +1333,7 @@ func (s *LocalDataStore) CreateUser(ctx context.Context, username string, level 
 	if err != nil {
 		return 0, err
 	}
-	res, err := s.db.ExecContext(ctx, `
+	res, err := db.ExecContext(ctx, `
 		INSERT INTO users (username, hash, level) VALUES (?, ?, ?)
 	`, username, string(hash), level)
 	if err != nil {
@@ -1354,9 +1342,9 @@ func (s *LocalDataStore) CreateUser(ctx context.Context, username string, level 
 	return res.LastInsertId()
 }
 
-func (s *LocalDataStore) GetUserByUsername(ctx context.Context, username string) (*UserRow, error) {
+func GetUserByUsername(db *sql.DB, ctx context.Context, username string) (*UserRow, error) {
 	var u UserRow
-	err := s.db.QueryRowContext(ctx, `
+	err := db.QueryRowContext(ctx, `
 		SELECT id, username, level FROM users WHERE username = ?
 	`, strings.TrimSpace(username)).Scan(&u.ID, &u.Username, &u.Level)
 	if err != nil {
@@ -1365,8 +1353,8 @@ func (s *LocalDataStore) GetUserByUsername(ctx context.Context, username string)
 	return &u, nil
 }
 
-func (s *LocalDataStore) ListUsers(ctx context.Context) ([]UserRow, error) {
-	rows, err := s.db.QueryContext(ctx, `
+func ListUsers(db *sql.DB, ctx context.Context) ([]UserRow, error) {
+	rows, err := db.QueryContext(ctx, `
 		SELECT id, username, level FROM users ORDER BY username
 	`)
 	if err != nil {
@@ -1385,29 +1373,29 @@ func (s *LocalDataStore) ListUsers(ctx context.Context) ([]UserRow, error) {
 	return out, rows.Err()
 }
 
-func (s *LocalDataStore) UpdateUsername(ctx context.Context, id int64, newUsername string) error {
+func UpdateUsername(db *sql.DB, ctx context.Context, id int64, newUsername string) error {
 	newUsername = strings.TrimSpace(newUsername)
 	if newUsername == "" {
 		return errors.New("username required")
 	}
-	_, err := s.db.ExecContext(ctx, `
+	_, err := db.ExecContext(ctx, `
 		UPDATE users SET username = ? WHERE id = ?
 	`, newUsername, id)
 	return err
 }
 
-func (s *LocalDataStore) UpdateUserLevel(ctx context.Context, id int64, newLevel int) error {
+func UpdateUserLevel(db *sql.DB, ctx context.Context, id int64, newLevel int) error {
 	if newLevel < 0 || newLevel > 10 {
 		return errors.New("level must be 0..10")
 	}
-	_, err := s.db.ExecContext(ctx, `
+	_, err := db.ExecContext(ctx, `
 		UPDATE users SET level = ? WHERE id = ?
 	`, newLevel, id)
 	return err
 }
 
 // replaces the bcrypt hash
-func (s *LocalDataStore) ResetUserPassword(ctx context.Context, id int64, newPlain string) error {
+func ResetUserPassword(db *sql.DB, ctx context.Context, id int64, newPlain string) error {
 	if newPlain == "" {
 		return errors.New("password required")
 	}
@@ -1415,14 +1403,14 @@ func (s *LocalDataStore) ResetUserPassword(ctx context.Context, id int64, newPla
 	if err != nil {
 		return err
 	}
-	_, err = s.db.ExecContext(ctx, `
+	_, err = db.ExecContext(ctx, `
 		UPDATE users SET hash = ? WHERE id = ?
 	`, string(hash), id)
 	return err
 }
 
-func (s *LocalDataStore) DeleteUser(ctx context.Context, id int64) error {
-	res, err := s.db.ExecContext(ctx, `DELETE FROM users WHERE id = ?`, id)
+func DeleteUser(db *sql.DB, ctx context.Context, id int64) error {
+	res, err := db.ExecContext(ctx, `DELETE FROM users WHERE id = ?`, id)
 	if err != nil {
 		return err
 	}
@@ -1432,19 +1420,19 @@ func (s *LocalDataStore) DeleteUser(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (s *LocalDataStore) CountUsers(ctx context.Context) (int64, error) {
+func CountUsers(db *sql.DB, ctx context.Context) (int64, error) {
 	var n int64
-	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM users`).Scan(&n); err != nil {
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM users`).Scan(&n); err != nil {
 		return 0, err
 	}
 	return n, nil
 }
 
 // checks bcrypt against stored hash; returns (username, level, ok).
-func (s *LocalDataStore) AuthenticateUser(ctx context.Context, username, password string) (string, int, bool, error) {
+func AuthenticateUser(db *sql.DB, ctx context.Context, username, password string) (string, int, bool, error) {
 	var hash string
 	var level int
-	err := s.db.QueryRowContext(ctx, `
+	err := db.QueryRowContext(ctx, `
 		SELECT hash, level FROM users WHERE username = ?
 	`, strings.TrimSpace(username)).Scan(&hash, &level)
 	if err != nil {
@@ -1461,14 +1449,14 @@ func (s *LocalDataStore) AuthenticateUser(ctx context.Context, username, passwor
 
 // -------- Messages CRUD ---------
 
-func (s *LocalDataStore) AddMessage(ctx context.Context, title, msg, typ string, img []byte, ts time.Time) (int64, error) {
+func AddMessage(db *sql.DB, ctx context.Context, title, msg, typ string, img []byte, ts time.Time) (int64, error) {
 	if title == "" || msg == "" {
 		return 0, errors.New("title and message required")
 	}
 	if ts.IsZero() {
 		ts = time.Now()
 	}
-	res, err := s.db.ExecContext(ctx, `
+	res, err := db.ExecContext(ctx, `
         INSERT INTO messages (ts, title, message, type, image)
         VALUES (?, ?, ?, ?, ?)`,
 		ts.Unix(), title, msg, typ, img)
@@ -1478,10 +1466,10 @@ func (s *LocalDataStore) AddMessage(ctx context.Context, title, msg, typ string,
 	return res.LastInsertId()
 }
 
-func (s *LocalDataStore) GetMessage(ctx context.Context, id int64) (*Message, error) {
+func GetMessage(db *sql.DB, ctx context.Context, id int64) (*Message, error) {
 	var m Message
 	var unix int64
-	err := s.db.QueryRowContext(ctx, `
+	err := db.QueryRowContext(ctx, `
         SELECT id, ts, title, message, type, image
         FROM messages WHERE id=?`, id).
 		Scan(&m.ID, &unix, &m.Title, &m.Message, &m.Type, &m.Image)
@@ -1493,11 +1481,11 @@ func (s *LocalDataStore) GetMessage(ctx context.Context, id int64) (*Message, er
 }
 
 // List (with limit/offset)
-func (s *LocalDataStore) ListMessages(ctx context.Context, limit, offset int) ([]Message, error) {
+func ListMessages(db *sql.DB, ctx context.Context, limit, offset int) ([]Message, error) {
 	if limit <= 0 {
 		limit = 50
 	}
-	rows, err := s.db.QueryContext(ctx, `
+	rows, err := db.QueryContext(ctx, `
         SELECT id, ts, title, message, type, image
         FROM messages
         ORDER BY ts DESC, id DESC
@@ -1521,7 +1509,7 @@ func (s *LocalDataStore) ListMessages(ctx context.Context, limit, offset int) ([
 }
 
 // Update (replace all fields except ts)
-func (s *LocalDataStore) UpdateMessage(ctx context.Context, id int64, title, msg, typ *string, img []byte, ts *time.Time) error {
+func UpdateMessage(db *sql.DB, ctx context.Context, id int64, title, msg, typ *string, img []byte, ts *time.Time) error {
 	if id <= 0 {
 		return errors.New("invalid id")
 	}
@@ -1561,7 +1549,7 @@ func (s *LocalDataStore) UpdateMessage(ctx context.Context, id int64, title, msg
 	q += " WHERE id = ?"
 	args = append(args, id)
 
-	res, err := s.db.ExecContext(ctx, q, args...)
+	res, err := db.ExecContext(ctx, q, args...)
 	if err != nil {
 		return err
 	}
@@ -1572,8 +1560,8 @@ func (s *LocalDataStore) UpdateMessage(ctx context.Context, id int64, title, msg
 }
 
 // by ID
-func (s *LocalDataStore) DeleteMessage(ctx context.Context, id int64) error {
-	res, err := s.db.ExecContext(ctx, `DELETE FROM messages WHERE id=?`, id)
+func DeleteMessage(db *sql.DB, ctx context.Context, id int64) error {
+	res, err := db.ExecContext(ctx, `DELETE FROM messages WHERE id=?`, id)
 	if err != nil {
 		return err
 	}
@@ -1584,7 +1572,7 @@ func (s *LocalDataStore) DeleteMessage(ctx context.Context, id int64) error {
 }
 
 // Public endpoint
-func (s *LocalDataStore) ListMessagesBefore(ctx context.Context, before time.Time, limit int) ([]Message, error) {
+func ListMessagesBefore(db *sql.DB, ctx context.Context, before time.Time, limit int) ([]Message, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 10
 	}
@@ -1592,7 +1580,7 @@ func (s *LocalDataStore) ListMessagesBefore(ctx context.Context, before time.Tim
 		before = time.Now().UTC()
 	}
 
-	rows, err := s.db.QueryContext(ctx, `
+	rows, err := db.QueryContext(ctx, `
 		SELECT id, ts, title, message, type, image
 		FROM messages
 		WHERE ts < ?

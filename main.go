@@ -27,9 +27,9 @@ var embeddedFiles embed.FS
 type Application struct {
 	config       *config.AppConfig
 	passConfig   *config.PassConfig
-	db           *shared.Database
+	db           *sql.DB
 	anal         *sql.DB
-	localStore   *com.LocalDataStore
+	localStore   *sql.DB
 	sessionStore *sessions.CookieStore
 	tempAdmin    *com.EphemeralAdmin
 	startTime    time.Time
@@ -57,13 +57,19 @@ func (app *Application) Close() error {
 	var errs []error
 
 	if app.localStore != nil {
-		if err := app.localStore.Close(); err != nil {
+		if err := shared.CloseDatabase(app.localStore); err != nil {
 			errs = append(errs, fmt.Errorf("local store close: %w", err))
 		}
 	}
 
 	if app.db != nil {
-		if err := app.db.Close(); err != nil {
+		if err := shared.CloseDatabase(app.db); err != nil {
+			errs = append(errs, fmt.Errorf("database close: %w", err))
+		}
+	}
+
+	if app.anal != nil {
+		if err := shared.CloseDatabase(app.anal); err != nil {
 			errs = append(errs, fmt.Errorf("database close: %w", err))
 		}
 	}
@@ -84,34 +90,28 @@ func (app *Application) loadConfig() error {
 func (app *Application) initializeStores() error {
 	// Init local data store (toml)
 	var err error
-	app.localStore, err = com.OpenLocalData(app.config)
+	app.localStore, err = shared.OpenDatabase(app.config.Paths.DataDir + "local_data.db")
 	if err != nil {
 		return fmt.Errorf("local data init: %w", err)
 	}
 
-	// Init sqlite3 for image meta and settings
-	dbCfg, err := shared.NewConfigFromAppConfig(app.config)
-	if err != nil {
-		return fmt.Errorf("database config: %w", err)
-	}
-
-	app.db, err = shared.OpenDatabase(dbCfg)
+	app.db, err = shared.OpenDatabase(app.config.Paths.DataDir + "image_metadata.db")
 	if err != nil {
 		return fmt.Errorf("database open: %w", err)
+	}
+
+	app.anal, err = shared.OpenDatabase(app.config.Paths.DataDir + "aggregateData.db")
+	if err != nil {
+		return fmt.Errorf("analytics db open: %w", err)
+	}
+	if err := shared.InitSchema(app.anal); err != nil {
+		return fmt.Errorf("analytics schema: %w", err)
 	}
 
 	// Init session store (signed + encrypted)
 	keys, err := com.LoadOrGenerateSessionKeys(app.config.Paths.DataDir)
 	if err != nil {
 		return fmt.Errorf("session key init: %w", err)
-	}
-
-	app.anal, err = shared.OpenAnalDB(app.config.Paths.DataDir)
-	if err != nil {
-		return fmt.Errorf("analytics db open: %w", err)
-	}
-	if err := shared.InitSchema(app.anal); err != nil {
-		return fmt.Errorf("analytics schema: %w", err)
 	}
 
 	secure := true
@@ -127,7 +127,7 @@ func (app *Application) runStartupTasks() error {
 	}
 
 	// Generate thumbnails
-	if err := com.RunThumbGen(app.config, app.db.DB); err != nil {
+	if err := com.RunThumbGen(app.config, app.db); err != nil {
 		return fmt.Errorf("thumbnail generation: %w", err)
 	}
 	log.Println("Data initialized")
@@ -225,7 +225,7 @@ func main() {
 	})
 
 	router := srv.CreateRouter()
-	go com.RunScheduledTasks(app.config)
+	//go com.RunScheduledTasks(app.config)
 
 	// start server with proper timeouts
 	httpServer := &http.Server{

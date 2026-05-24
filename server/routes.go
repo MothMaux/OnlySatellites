@@ -15,13 +15,14 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"OnlySats/com"
 	"OnlySats/com/shared"
 	"OnlySats/handlers"
 )
 
 func (s *Server) setupUpdateRoutes(r *mux.Router) {
 	cd := time.Minute
-	if settingVal, err := s.cfg.LocalStore.GetSetting(context.Background(), "update_cd"); err == nil {
+	if settingVal, err := com.GetSetting(s.cfg.LocalStore, context.Background(), "update_cd"); err == nil {
 		if n, err := strconv.ParseInt(strings.TrimSpace(settingVal), 10, 64); err == nil && n > 0 {
 			cd = time.Duration(n) * time.Second
 		}
@@ -193,7 +194,7 @@ func (s *Server) setupSatdumpRoutes(r *mux.Router) {
 			return "", 0, fmt.Errorf("empty")
 		}
 
-		if row, err := s.cfg.LocalStore.GetSatdump(ctx, name); err == nil && row != nil {
+		if row, err := com.GetSatdump(s.cfg.LocalStore, ctx, name); err == nil && row != nil {
 			ip := strings.TrimSpace(row.Address)
 			if ip == "" {
 				ip = shared.GetHostIPv4()
@@ -205,7 +206,7 @@ func (s *Server) setupSatdumpRoutes(r *mux.Router) {
 			return ip, port, nil
 		}
 		want := norm(name)
-		list, _ := s.cfg.LocalStore.ListSatdump(ctx)
+		list, _ := com.ListSatdump(s.cfg.LocalStore, ctx)
 		for _, sd := range list {
 			if norm(sd.Name) == want {
 				ip := strings.TrimSpace(sd.Address)
@@ -223,7 +224,7 @@ func (s *Server) setupSatdumpRoutes(r *mux.Router) {
 	}
 
 	firstInstance := func(ctx context.Context) (string, bool) {
-		list, err := s.cfg.LocalStore.ListSatdump(ctx)
+		list, err := com.ListSatdump(s.cfg.LocalStore, ctx)
 		if err != nil || len(list) == 0 {
 			return "", false
 		}
@@ -305,12 +306,12 @@ func (s *Server) setupSatdumpRoutes(r *mux.Router) {
 		rateMS := 500
 		spanSec := 300
 
-		if v, _ := s.cfg.LocalStore.GetSetting(r.Context(), "satdump_rate"); strings.TrimSpace(v) != "" {
+		if v, _ := com.GetSetting(s.cfg.LocalStore, r.Context(), "satdump_rate"); strings.TrimSpace(v) != "" {
 			if n, err := strconv.Atoi(strings.TrimSpace(v)); err == nil && n > 0 {
 				rateMS = n
 			}
 		}
-		if v, _ := s.cfg.LocalStore.GetSetting(r.Context(), "satdump_span"); strings.TrimSpace(v) != "" {
+		if v, _ := com.GetSetting(s.cfg.LocalStore, r.Context(), "satdump_span"); strings.TrimSpace(v) != "" {
 			if n, err := strconv.Atoi(strings.TrimSpace(v)); err == nil && n > 0 {
 				spanSec = n
 			}

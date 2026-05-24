@@ -14,7 +14,6 @@ import (
 	"github.com/gorilla/sessions"
 
 	com "OnlySats/com"
-	"OnlySats/com/shared"
 	"OnlySats/config"
 	"OnlySats/handlers"
 )
@@ -23,9 +22,9 @@ import (
 type Config struct {
 	AppConfig    *config.AppConfig
 	PassConfig   *config.PassConfig
-	DB           *shared.Database
+	DB           *sql.DB
 	AnalDB       *sql.DB
-	LocalStore   *com.LocalDataStore
+	LocalStore   *sql.DB
 	SessionStore *sessions.CookieStore
 	TempAdmin    *com.EphemeralAdmin
 	StartTime    time.Time
@@ -80,7 +79,7 @@ func (s *Server) setupGalleryRoutes(r *mux.Router) {
 
 	apiHandler := handlers.NewAPIHandler(s.cfg.DB)
 	gapi := &handlers.GalleryAPI{
-		DB:            s.cfg.DB.DB,
+		DB:            s.cfg.DB,
 		LiveOutputDir: s.cfg.AppConfig.Paths.LiveOutputDir,
 		UserContent:   filepath.Join("public", "userContent"),
 		LocalStore:    s.cfg.LocalStore,

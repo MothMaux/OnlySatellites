@@ -3,6 +3,7 @@ package com
 import (
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"io"
@@ -127,15 +128,15 @@ type EphemeralAdmin struct {
 }
 
 // returns true if there is any user with level <= 1 in DB.
-func hasAdmins(ctx context.Context, s *LocalDataStore) (bool, error) {
+func hasAdmins(ctx context.Context, db *sql.DB) (bool, error) {
 	var n int64
-	err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM users WHERE level <= 1`).Scan(&n)
+	err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM users WHERE level <= 1`).Scan(&n)
 	return n > 0, err
 }
 
 // create an in-memory admin ("admin"/random) ONLY if there are no level<=1 users.
-func NewEphemeralAdminIfNoAdmins(ctx context.Context, s *LocalDataStore) (*EphemeralAdmin, error) {
-	ok, err := hasAdmins(ctx, s)
+func NewEphemeralAdminIfNoAdmins(ctx context.Context, db *sql.DB) (*EphemeralAdmin, error) {
+	ok, err := hasAdmins(ctx, db)
 	if err != nil {
 		return nil, err
 	}
@@ -150,11 +151,11 @@ func NewEphemeralAdminIfNoAdmins(ctx context.Context, s *LocalDataStore) (*Ephem
 }
 
 // Try authenticates against the ephemeral admin, but ONLY if there are still no level<=1 users in DB.
-func (e *EphemeralAdmin) Try(ctx context.Context, s *LocalDataStore, username, password string) (level int, ok bool) {
+func (e *EphemeralAdmin) Try(ctx context.Context, db *sql.DB, username, password string) (level int, ok bool) {
 	if e == nil || !e.enabled {
 		return 0, false
 	}
-	has, err := hasAdmins(ctx, s)
+	has, err := hasAdmins(ctx, db)
 	if err != nil || has {
 		// Disable once a real admin exists (or on error to be safe)
 		e.enabled = false

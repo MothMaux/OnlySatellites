@@ -64,7 +64,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	password := r.FormValue("password")
 
 	// DB auth first
-	user, level, ok, err := s.cfg.LocalStore.AuthenticateUser(r.Context(), username, password)
+	user, level, ok, err := com.AuthenticateUser(s.cfg.LocalStore, r.Context(), username, password)
 	if err != nil {
 		http.Error(w, "Auth error", http.StatusInternalServerError)
 		return

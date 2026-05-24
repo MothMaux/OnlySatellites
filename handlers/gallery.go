@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"OnlySats/com"
 	"archive/zip"
 	"context"
 	"database/sql"
@@ -15,13 +14,15 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"OnlySats/com"
 )
 
 type GalleryAPI struct {
 	DB            *sql.DB
 	LiveOutputDir string
 	UserContent   string
-	LocalStore    *com.LocalDataStore
+	LocalStore    *sql.DB
 }
 
 type compEntry struct {
@@ -42,7 +43,7 @@ type GalleryPageData struct {
 func getLimit(api *GalleryAPI) (li int) {
 	limit := 15
 	if api.LocalStore != nil {
-		if s, err := api.LocalStore.GetSetting(context.Background(), "pass_limit"); err == nil {
+		if s, err := com.GetSetting(api.LocalStore, context.Background(), "pass_limit"); err == nil {
 			if v, err2 := strconv.Atoi(strings.TrimSpace(s)); err2 == nil && v > 0 {
 				limit = v
 			}
@@ -555,8 +556,8 @@ func (api *GalleryAPI) loadCompositeEntries(ctx context.Context) ([]compEntry, e
 		return nil, nil
 	}
 
-	cfg, _ := api.LocalStore.ListConfiguredComposites(ctx)
-	rules, _ := api.LocalStore.ListRuleComposites(ctx)
+	cfg, _ := com.ListConfiguredComposites(api.LocalStore, ctx)
+	rules, _ := com.ListRuleComposites(api.LocalStore, ctx)
 
 	out := map[string]compEntry{}
 

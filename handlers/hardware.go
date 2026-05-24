@@ -3,6 +3,7 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -20,7 +21,7 @@ import (
 
 type HardwareHandler struct {
 	Cfg     *config.AppConfig
-	Store   *com.LocalDataStore
+	Store   *sql.DB
 	Timeout time.Duration
 }
 
@@ -115,7 +116,7 @@ func (h *InfoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (h *HardwareHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	mode := "native"
 	if h.Store != nil {
-		if v, err := h.Store.GetSetting(r.Context(), "hwmonitor"); err == nil && v != "" {
+		if v, err := com.GetSetting(h.Store, r.Context(), "hwmonitor"); err == nil && v != "" {
 			mode = v
 		}
 	}

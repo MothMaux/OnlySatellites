@@ -31,7 +31,7 @@ type Satdump struct {
 }
 
 type SatdumpHandler struct {
-	Store  *com.LocalDataStore
+	Store  *sql.DB
 	AnalDB *sql.DB
 }
 
@@ -149,7 +149,7 @@ func SatdumpHTML(hostIP string, port int) http.HandlerFunc {
 }
 
 func (a *SatdumpHandler) List(w http.ResponseWriter, r *http.Request) {
-	rows, err := a.Store.ListSatdump(r.Context())
+	rows, err := com.ListSatdump(a.Store, r.Context())
 	if err != nil {
 		serverErr(w, err)
 		return
@@ -163,7 +163,7 @@ func (a *SatdumpHandler) Get(w http.ResponseWriter, r *http.Request) {
 		badRequest(w, "missing name")
 		return
 	}
-	row, err := a.Store.GetSatdump(r.Context(), name)
+	row, err := com.GetSatdump(a.Store, r.Context(), name)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			notFound(w, "satdump not found")
@@ -195,7 +195,7 @@ func (a *SatdumpHandler) Create(w http.ResponseWriter, r *http.Request) {
 		in.Logging = 1
 	}
 
-	if err := a.Store.CreateSatdump(r.Context(), in.Name, in.Address, in.Port, in.Logging); err != nil {
+	if err := com.CreateSatdump(a.Store, r.Context(), in.Name, in.Address, in.Port, in.Logging); err != nil {
 		serverErr(w, err)
 		return
 	}
@@ -261,7 +261,7 @@ func (a *SatdumpHandler) Update(w http.ResponseWriter, r *http.Request) {
 		logPtr = &lv
 	}
 
-	if err := a.Store.UpdateSatdump(r.Context(), oldName, newName, addrPtr, portPtr, logPtr); err != nil {
+	if err := com.UpdateSatdump(a.Store, r.Context(), oldName, newName, addrPtr, portPtr, logPtr); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			notFound(w, "satdump not found")
 			return
@@ -270,7 +270,7 @@ func (a *SatdumpHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	row, err := a.Store.GetSatdump(r.Context(), newName)
+	row, err := com.GetSatdump(a.Store, r.Context(), newName)
 	if err != nil {
 		writeJSON(w, http.StatusOK, map[string]string{"updated": newName})
 		return
@@ -284,7 +284,7 @@ func (a *SatdumpHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		badRequest(w, "missing name")
 		return
 	}
-	if err := a.Store.DeleteSatdump(r.Context(), name); err != nil {
+	if err := com.DeleteSatdump(a.Store, r.Context(), name); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			notFound(w, "satdump not found")
 			return
