@@ -31,6 +31,9 @@ Golang 1.21 or later
       `sudo Pacman -S go libvips`
       `sudo setcap CAP_NET_BIND_SERVICE=+eip /path/to/OnlySats`
 
+On windows, run the build.bat file. Modify the file if you would like to switch modes.
+On linux, run `sh build.sh mode` Three modes are currently available, [release, experimental, debug]
+
 ### Configuration Files
 
 - **`config.toml`**: Main application configuration file
