@@ -20,61 +20,67 @@ And much more to come
 ## Building and Running
 
 ### Building
+Requires golang 1.21 or later
 
-Dependencies: 
-Golang 1.21 or later
-   Windows: mingw, gcc, libvips, libglib
-   Debian/Ubuntu: libvips
-      `sudo apt install golang-go libvips libvips-dev`
-      install golang manually to get the latest versions (will help performance)
-   Arch: libvips
-      `sudo Pacman -S go libvips`
-      `sudo setcap CAP_NET_BIND_SERVICE=+eip /path/to/OnlySats`
+<b>Windows</b>: mingw, gcc, libvips, libglib
 
-On windows, run the build.bat file. Modify the file if you would like to switch modes.
-On linux, run `sh build.sh mode` Three modes are currently available, [release, experimental, debug]
+<b>Debian/Ubuntu</b>: libvips<br>
+install golang manually to get the latest versions which will help performance
+   ```
+   sudo apt install golang-go libvips libvips-dev
+   ``` 
+   
+
+<b>Arch:</b> libvips
+```
+sudo Pacman -S go libvips
+sudo setcap CAP_NET_BIND_SERVICE=+eip /path/to/OnlySats
+```
+
+On windows: run `build.bat` Modify the batch script if you would like to switch modes.<br>
+On linux: run `sh build.sh mode` Three modes are currently available, [release, experimental, debug]
 
 ### Configuration Files
 
-- **`config.toml`**: Main application configuration file
+**`config.toml`** is where you will find the server settings.
 
-The TOML configuration includes:
+The TOML file is in progress, some of these settings may not affect anything. The settings you will find here will eventually be fully controllable through the hosted site on the admin page.<br>Defaults & explanations:
 
 ```toml
 // https server settings
 [server]
 port = ":1500" //port, include colon
-host = "localhost" //listening host, localhost works for everthing afaik
-session_secret = "your-secret-key" //Deprecated, will be re-introduced. Session encraption key. OnlySats now uses temporary, randomly generated ENV VAR KEYs
-read_timeout = 30 
-write_timeout = 30
+host = "localhost" //listening host, localhost works as far as I am aware
+session_secret = "your-secret-key" //Deprecated, will be re-introduced. Session encraption key. OnlySats now uses temporary generated keys located in the data directory
+read_timeout = 30 //sqlite read timeout in seconds 
+write_timeout = 30 //sqlite write timeout in seconds
 
 [database]
-path = "data/image_metadata.db" //path to database file, deprecated. Now uses [paths] data_dir and .db names are hard-set
-max_open_conns = 1 // database settings, 
-max_idle_conns = 1
-conn_max_lifetime = 0
-cache_size = 10000
+max_open_conns = 1 //Default, unused
+max_idle_conns = 1 //Default, unused
+conn_max_lifetime = 0 //Default, unused
+cache_size = 10000 //Default, unused
 
 [paths] //relative or absolute paths to storage directories. 
-data_dir = "data" //where to store databases
-live_output_dir = "live_output" //satdumps live_output folder
-thumbnail_dir = "" //where to store generated thumbnails, leave blank to have them stored with the original images
-log_dir = "logs" //where to store logs
+data_dir = "data" //where to store databases & keys
+live_output_dir = "live_output" //satdumps live_output folder FILES IN THIS DIRECTORY MAY BE EXPOSED TO ANYONE THAT VISITS THE SITE
+thumbnail_dir = "" //where to store generated thumbnails, reccomended: leave blank to have them stored with the original images
+log_dir = "logs" //where to store logs, partially used
 
 [thumbgen] //Thumbnail settings, adjust if it takes a long time to generate thumbnails for images or to increase quality.
-max_workers = 4 //threads, increase if your have more threads available and thumbgen is running slowly.
-batch_size = 1000 //how many processes to run at once
+max_workers = 4 //threads, increase if your have more threads available and thumbgen is running slowly. affects CPU usage
+batch_size = 1000 //how many images to process per thread, affects MEMORY usage
 thumbnail_width = 200 //width of generated thumbnails in px. Note: gallery thumbnails are in 200px wide canvases.
 quality = 75 // 0-100 quality rating of the thumbnail, lower to increase performance, raise to increase quality
+//width and quality will mainly affect STORAGE and NETWORK usage, but may impact CPU/MEM slightly when generating thumbnails.
 
-[logging] //Logging level has no effect as of right now, logging features need to be improved. 
-level = "info" //all of these will be removed eventually, and set in the webapp itself.
-file = "app.log"
-max_size = 100
-max_backups = 3
-max_age = 28
-compress = true
+[logging] //Partially used, 
+level = "" //if set to "detailed" it will log thumbgen stats
+file = "app.log" //unused maybe?? will be changing soon.
+max_size = 100 //Unused. Maximum size in lines for any given log
+max_backups = 3 //Unused? How many old logs to keep before deleting
+max_age = 28 //Unused. How old a log can be before deleting
+compress = true //Deprecated.
 ```
 
 
@@ -82,7 +88,7 @@ compress = true
 
 ### Common Issues
 
-1. **CGO Errors**: Ensure GCC is installed and CGO_ENABLED=1
+1. **CGO Errors, Issues Building**: Use the build scripts, they help ;3
 2. **Database Locked**: Check for other processes using the database
-3. **Permission Errors**: Ensure write permissions for data directories
-4. **Memory Issues**: Reduce batch size or worker count for large datasets
+3. **Permission Errors**: Give write permissions for data directories and socket permissions for port 80
+4. **Memory or CPU Issues**: Reduce batch size or worker count for larger live_output folders
