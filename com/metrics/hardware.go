@@ -308,8 +308,8 @@ func getCPUPackagePowerMacOS() *float64 {
 	cmd := exec.Command("powermetrics", "-n", "1", "-i", "1000", "--samplers", "cpu_power")
 	if output, err := cmd.Output(); err == nil {
 		// Parse CPU power from powermetrics output
-		lines := strings.Split(string(output), "\n")
-		for _, line := range lines {
+		lines := strings.SplitSeq(string(output), "\n")
+		for line := range lines {
 			if strings.Contains(line, "CPU Power") {
 				// Extract power value
 				// Implementation depends on exact format
@@ -351,8 +351,8 @@ func getNVIDIAGPUs() []GPUMetrics {
 		return gpus
 	}
 
-	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(strings.TrimSpace(string(output)), "\n")
+	for line := range lines {
 		fields := strings.Split(line, ", ")
 		if len(fields) >= 7 {
 			gpu := GPUMetrics{
@@ -464,8 +464,8 @@ func getDiskTemperatureLinux(device string) *float64 {
 		return nil
 	}
 
-	lines := strings.Split(string(output), "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(string(output), "\n")
+	for line := range lines {
 		if strings.Contains(line, "Temperature_Celsius") || strings.Contains(line, "Airflow_Temperature_Cel") {
 			fields := strings.Fields(line)
 			if len(fields) >= 10 {
@@ -496,8 +496,8 @@ func getDiskTemperatureMacOS(device string) *float64 {
 	}
 
 	// Parse smartctl output similar to Linux
-	lines := strings.Split(string(output), "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(string(output), "\n")
+	for line := range lines {
 		if strings.Contains(line, "Temperature_Celsius") {
 			fields := strings.Fields(line)
 			if len(fields) >= 10 {
@@ -551,8 +551,8 @@ func getSystemPowerMacOS() *float64 {
 	if output, err := cmd.Output(); err == nil {
 		// Parse powermetrics output for total system power
 		// Implementation depends on exact output format
-		lines := strings.Split(string(output), "\n")
-		for _, line := range lines {
+		lines := strings.SplitSeq(string(output), "\n")
+		for line := range lines {
 			if strings.Contains(line, "System Power") {
 				// Extract power value
 			}
@@ -600,7 +600,7 @@ func indexFold(s, sub string) int {
 	}
 	for i := 0; i+n <= len(s); i++ {
 		ok := true
-		for j := 0; j < n; j++ {
+		for j := range n {
 			a := s[i+j]
 			b := sub[j]
 			if 'A' <= a && a <= 'Z' {

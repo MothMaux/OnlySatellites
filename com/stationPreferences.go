@@ -648,19 +648,20 @@ func UpdateAboutImage(db *sql.DB, ctx context.Context, id int64, path *string, c
 	if len(parts) == 0 {
 		return errors.New("no fields to update")
 	}
-	q := "UPDATE about_images SET "
+	var q strings.Builder
+	q.WriteString("UPDATE about_images SET ")
 	args := make([]any, 0, len(parts)+1)
 	for i, p := range parts {
 		if i > 0 {
-			q += ", "
+			q.WriteString(", ")
 		}
-		q += p.sql
+		q.WriteString(p.sql)
 		args = append(args, p.arg)
 	}
-	q += " WHERE id = ?"
+	q.WriteString(" WHERE id = ?")
 	args = append(args, id)
 
-	_, err := db.ExecContext(ctx, q, args...)
+	_, err := db.ExecContext(ctx, q.String(), args...)
 	return err
 }
 
@@ -1534,19 +1535,20 @@ func UpdateMessage(db *sql.DB, ctx context.Context, id int64, title, msg, typ *s
 	if len(set) == 0 {
 		return errors.New("nothing to update")
 	}
-	q := "UPDATE messages SET "
+	var q strings.Builder
+	q.WriteString("UPDATE messages SET ")
 	args := make([]any, 0, len(set)+1)
 	for i, p := range set {
 		if i > 0 {
-			q += ", "
+			q.WriteString(", ")
 		}
-		q += p.sql
+		q.WriteString(p.sql)
 		args = append(args, p.arg)
 	}
-	q += " WHERE id = ?"
+	q.WriteString(" WHERE id = ?")
 	args = append(args, id)
 
-	res, err := db.ExecContext(ctx, q, args...)
+	res, err := db.ExecContext(ctx, q.String(), args...)
 	if err != nil {
 		return err
 	}

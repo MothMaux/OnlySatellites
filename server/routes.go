@@ -129,7 +129,7 @@ func (s *Server) setupMiscRoutes(r *mux.Router) {
 // handleStats returns server statistics
 func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	stats := map[string]interface{}{
+	stats := map[string]any{
 		"startTime": s.cfg.StartTime.Unix(),
 		"uptime":    time.Since(s.cfg.StartTime).Seconds(),
 	}
