@@ -6,10 +6,14 @@ set CGO_ENABLED=1
 REM uncomment to use golang experimental garbage collector. Requires golang 1.25 or higher.
 :: set GOEXPERIMENT=greenteagc
 
+go run com/comptime/minify.go
+echo web files minified successfully!
+
 go build -o OnlySats.exe main.go
 if %ERRORLEVEL% neq 0 (
     echo Failed to build main application
     exit /b 1
 )
-
 echo Build completed successfully!
+remove /Q web
+echo Temporary files cleaned up!

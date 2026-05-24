@@ -21,7 +21,7 @@ import (
 	"OnlySats/server"
 )
 
-//go:embed public/**
+//go:embed web/**
 var embeddedFiles embed.FS
 
 // Application holds all the application state and dependencies
