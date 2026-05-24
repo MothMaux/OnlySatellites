@@ -352,7 +352,7 @@ func (h *MessagesHandler) Update(w http.ResponseWriter, r *http.Request) {
 		imgBytes = data
 		imgSet = true
 	} else if err == http.ErrMissingFile {
-	} else if err != nil {
+	} else {
 		badRequest(w, "image upload error: "+err.Error())
 		return
 	}
