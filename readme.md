@@ -25,9 +25,10 @@ Dependencies:
 Golang 1.21 or later
    Windows: mingw, gcc, libvips, libglib
    Debian/Ubuntu: libvips
-      `sudo apt install libvips libvips-dev`
+      `sudo apt install golang-go libvips libvips-dev`
+      install golang manually to get the latest versions (will help performance)
    Arch: libvips
-      `sudo Pacman -S libvips`
+      `sudo Pacman -S go libvips`
       `sudo setcap CAP_NET_BIND_SERVICE=+eip /path/to/OnlySats`
 
 ### Configuration Files
