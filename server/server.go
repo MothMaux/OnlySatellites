@@ -14,18 +14,15 @@ import (
 	"github.com/gorilla/sessions"
 
 	com "OnlySats/com"
-	"OnlySats/com/shared"
 	"OnlySats/config"
 	"OnlySats/handlers"
 )
 
 // dependencies used by the server
 type Config struct {
-	AppConfig    *config.AppConfig
-	PassConfig   *config.PassConfig
-	DB           *shared.Database
+	DB           *sql.DB
 	AnalDB       *sql.DB
-	LocalStore   *com.LocalDataStore
+	LocalStore   *sql.DB
 	SessionStore *sessions.CookieStore
 	TempAdmin    *com.EphemeralAdmin
 	StartTime    time.Time
@@ -80,8 +77,8 @@ func (s *Server) setupGalleryRoutes(r *mux.Router) {
 
 	apiHandler := handlers.NewAPIHandler(s.cfg.DB)
 	gapi := &handlers.GalleryAPI{
-		DB:            s.cfg.DB.DB,
-		LiveOutputDir: s.cfg.AppConfig.Paths.LiveOutputDir,
+		DB:            s.cfg.DB,
+		LiveOutputDir: config.GetString("paths.live_output"),
 		UserContent:   filepath.Join("public", "userContent"),
 		LocalStore:    s.cfg.LocalStore,
 	}
@@ -105,8 +102,9 @@ func (s *Server) setupGalleryRoutes(r *mux.Router) {
 }
 
 func (s *Server) setupImageRoutes(r *mux.Router) {
-	r.PathPrefix("/images/").Handler(handlers.ImageServer(s.cfg.AppConfig.Paths.LiveOutputDir))
-	r.PathPrefix("/thumbnails/").Handler(handlers.ThumbnailServer(s.cfg.AppConfig.Paths.LiveOutputDir, s.cfg.AppConfig.Paths.ThumbnailDir))
+	liveOut := config.GetString("paths.live_output")
+	r.PathPrefix("/images/").Handler(handlers.ImageServer(liveOut))
+	r.PathPrefix("/thumbnails/").Handler(handlers.ThumbnailServer(liveOut, config.GetString("paths.thumbnails")))
 }
 
 func (s *Server) mustSubFS(dir string) http.FileSystem {

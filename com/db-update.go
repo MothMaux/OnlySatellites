@@ -51,7 +51,6 @@ type Dataset struct {
 }
 
 type updCtx struct {
-	cfg           *config.AppConfig
 	passCfg       *config.PassConfig
 	db            *sql.DB
 	liveOutputDir string
@@ -767,9 +766,6 @@ func (c *updCtx) updateMetadata(existingPasses map[string]existingPassData) erro
 }
 
 func (c *updCtx) processPasses(mode int8) error {
-	if c.cfg == nil {
-		return fmt.Errorf("processPasses: AppConfig is nil")
-	}
 	if c.passCfg == nil {
 		return fmt.Errorf("processPasses: PassConfig is nil")
 	}
@@ -892,19 +888,18 @@ func (c *updCtx) processPasses(mode int8) error {
 }
 
 // entrypoint
-func RunDBUpdate(cfg *config.AppConfig, passCfg *config.PassConfig, repopulate bool) error {
-	if cfg == nil {
-		return fmt.Errorf("RunDBUpdate: cfg is nil")
-	}
-	if strings.TrimSpace(cfg.Paths.DataDir) == "" {
+func RunDBUpdate(passCfg *config.PassConfig, repopulate bool) error {
+	dataDir := config.GetString("paths.data")
+	liveDir := config.GetString("paths.live_output")
+	if strings.TrimSpace(dataDir) == "" {
 		return fmt.Errorf("RunDBUpdate: database.path missing")
 	}
-	if strings.TrimSpace(cfg.Paths.LiveOutputDir) == "" {
+	if strings.TrimSpace(liveDir) == "" {
 		return fmt.Errorf("RunDBUpdate: paths.live_output_dir missing")
 	}
 
 	ctx := context.Background()
-	prefsDBPath := filepath.Join(strings.TrimSpace(cfg.Paths.DataDir), "local_data.db")
+	prefsDBPath := filepath.Join(strings.TrimSpace(dataDir), "local_data.db")
 	if loaded, err := loadPassConfigFromPrefs(ctx, prefsDBPath); err == nil {
 		passCfg = loaded
 		fmt.Println("PassConfig loaded")
@@ -915,17 +910,16 @@ func RunDBUpdate(cfg *config.AppConfig, passCfg *config.PassConfig, repopulate b
 		return fmt.Errorf("RunDBUpdate: no pass config available")
 	}
 
-	db, err := sql.Open("sqlite3", filepath.Join(cfg.Paths.DataDir, "image_metadata.db"))
+	db, err := sql.Open("sqlite3", filepath.Join(dataDir, "image_metadata.db"))
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
 	}
 	defer db.Close()
 
 	uctx := &updCtx{
-		cfg:           cfg,
 		passCfg:       passCfg,
 		db:            db,
-		liveOutputDir: cfg.Paths.LiveOutputDir,
+		liveOutputDir: liveDir,
 	}
 
 	if err := uctx.initializeDatabase(); err != nil {
@@ -941,19 +935,19 @@ func RunDBUpdate(cfg *config.AppConfig, passCfg *config.PassConfig, repopulate b
 	return uctx.processPasses(1)
 }
 
-func RunDBMetadataUpdate(cfg *config.AppConfig, passCfg *config.PassConfig) error {
-	if cfg == nil {
-		return fmt.Errorf("RunDBMetadataUpdate: cfg is nil")
+func RunDBMetadataUpdate() error {
+	dataDir := config.GetString("paths.data")
+	liveDir := config.GetString("paths.live_output")
+	var passCfg *config.PassConfig
+	if strings.TrimSpace(dataDir) == "" {
+		return fmt.Errorf("RunDBUpdate: database.path missing")
 	}
-	if strings.TrimSpace(cfg.Paths.DataDir) == "" {
-		return fmt.Errorf("RunDBMetadataUpdate: database.path missing")
-	}
-	if strings.TrimSpace(cfg.Paths.LiveOutputDir) == "" {
-		return fmt.Errorf("RunDBMetadataUpdate: paths.live_output_dir missing")
+	if strings.TrimSpace(liveDir) == "" {
+		return fmt.Errorf("RunDBUpdate: paths.live_output_dir missing")
 	}
 
 	ctx := context.Background()
-	prefsDBPath := filepath.Join(strings.TrimSpace(cfg.Paths.DataDir), "local_data.db")
+	prefsDBPath := filepath.Join(strings.TrimSpace(dataDir), "local_data.db")
 	if loaded, err := loadPassConfigFromPrefs(ctx, prefsDBPath); err == nil {
 		passCfg = loaded
 		fmt.Println("PassConfig loaded")
@@ -964,17 +958,16 @@ func RunDBMetadataUpdate(cfg *config.AppConfig, passCfg *config.PassConfig) erro
 		return fmt.Errorf("RunDBMetadataUpdate: no pass config available")
 	}
 
-	db, err := sql.Open("sqlite3", filepath.Join(cfg.Paths.DataDir, "image_metadata.db"))
+	db, err := sql.Open("sqlite3", filepath.Join(dataDir, "image_metadata.db"))
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
 	}
 	defer db.Close()
 
 	uctx := &updCtx{
-		cfg:           cfg,
 		passCfg:       passCfg,
 		db:            db,
-		liveOutputDir: cfg.Paths.LiveOutputDir,
+		liveOutputDir: liveDir,
 	}
 
 	if err := uctx.initializeDatabase(); err != nil {

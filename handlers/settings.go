@@ -3,6 +3,7 @@ package handlers
 import (
 	"OnlySats/com"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"regexp"
@@ -11,7 +12,7 @@ import (
 )
 
 type SettingsHandler struct {
-	Store *com.LocalDataStore
+	Store *sql.DB
 }
 
 var cssVarKeyRe = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
@@ -43,7 +44,7 @@ func (h *SettingsHandler) PostTheme(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "invalid variable name: "+k, http.StatusBadRequest)
 				return
 			}
-			if err := h.Store.SetColor(ctx, k, v); err != nil {
+			if err := com.SetColor(h.Store, ctx, k, v); err != nil {
 				http.Error(w, "failed to save: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -112,7 +113,7 @@ func (h *SettingsHandler) PostSettings(w http.ResponseWriter, r *http.Request) {
 			val = strings.TrimSpace(s)
 		}
 
-		if err := h.Store.SetSetting(ctx, key, val); err != nil {
+		if err := com.SetSetting(h.Store, ctx, key, val); err != nil {
 			results = append(results, setResult{Key: key, Value: val, Err: err.Error()})
 			continue
 		}
@@ -138,7 +139,7 @@ func (h *SettingsHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
-	settings, err := h.Store.ListSettings(ctx)
+	settings, err := com.ListSettings(h.Store, ctx)
 	if err != nil {
 		http.Error(w, "failed to list settings: "+err.Error(), http.StatusInternalServerError)
 		return

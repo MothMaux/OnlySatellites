@@ -22,11 +22,14 @@ And much more to come
 ### Building
 
 Dependencies: 
-Golang 1.21 or later is required for building.
-Windows Run: libvips, libglib
-Windows build: mingw, gcc, libvips, libglib
-Linux build and run: vips
+Golang 1.21 or later
+   Windows: mingw, gcc, libvips, libglib
+   Debian/Ubuntu: libvips
       `sudo apt install golang-go libvips libvips-dev`
+      install golang manually to get the latest versions (will help performance)
+   Arch: libvips
+      `sudo Pacman -S go libvips`
+      `sudo setcap CAP_NET_BIND_SERVICE=+eip /path/to/OnlySats`
 
 ### Configuration Files
 

@@ -3,65 +3,12 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
+	"sync"
+	"sync/atomic"
 
 	"github.com/pelletier/go-toml/v2"
 )
-
-// Core Config Structures
-
-type AppConfig struct {
-	Server       ServerConfig       `toml:"server"`
-	Database     DatabaseConfig     `toml:"database"`
-	Paths        PathsConfig        `toml:"paths"`
-	Thumbgen     ThumbgenConfig     `toml:"thumbgen"`
-	StationProxy StationProxyConfig `toml:"stationproxy"`
-}
-
-type PassConfig struct {
-	Composites map[string]string         `toml:"composites"`
-	PassTypes  map[string]PassTypeConfig `toml:"passTypes"`
-	Passes     PassesConfig              `toml:"passes"`
-}
-
-// App Config Sections
-
-type ServerConfig struct {
-	Port         string `toml:"port"`
-	ReadTimeout  int    `toml:"read_timeout"`
-	WriteTimeout int    `toml:"write_timeout"`
-	LogLevel     string `toml:"log_level"`
-}
-
-type DatabaseConfig struct {
-	MaxOpenConns    int `toml:"max_open_conns"`
-	MaxIdleConns    int `toml:"max_idle_conns"`
-	ConnMaxLifetime int `toml:"conn_max_lifetime"`
-	CacheSize       int `toml:"cache_size"`
-}
-
-type PathsConfig struct {
-	DataDir       string `toml:"data_dir"`
-	LiveOutputDir string `toml:"live_output_dir"`
-	ThumbnailDir  string `toml:"thumbnail_dir"`
-	LogDir        string `toml:"log_dir"`
-}
-
-type ThumbgenConfig struct {
-	MaxWorkers     int `toml:"max_workers"`
-	BatchSize      int `toml:"batch_size"`
-	ThumbnailWidth int `toml:"thumbnail_width"`
-	Quality        int `toml:"quality"`
-}
-
-type StationProxyConfig struct {
-	Enabled       bool   `toml:"enabled"`
-	StationId     string `toml:"station_name"`
-	StationSecret string `toml:"station_secret"`
-	FrpsAddr      string `toml:"frps_addr"`
-	FrpsPort      int    `toml:"frps_port"`
-}
-
-// Pass Config Structures
 
 type ImageDirConfig struct {
 	IsFilled    bool   `toml:"isFilled"`
@@ -82,85 +29,192 @@ type PassesConfig struct {
 	FolderIncludes map[string]string `toml:"folderincludes"`
 }
 
-// Defaults & Loaders
-
-func DefaultConfig() (*AppConfig, *PassConfig) {
-	return &AppConfig{
-			Server: ServerConfig{
-				Port:         ":1500",
-				ReadTimeout:  30,
-				WriteTimeout: 30,
-			},
-			Database: DatabaseConfig{
-				MaxOpenConns:    1,
-				MaxIdleConns:    1,
-				ConnMaxLifetime: 0,
-				CacheSize:       10000,
-			},
-			Paths: PathsConfig{
-				DataDir:       "data",
-				LiveOutputDir: "live_output",
-				ThumbnailDir:  "",
-				LogDir:        "logs",
-			},
-			Thumbgen: ThumbgenConfig{
-				MaxWorkers:     4,
-				BatchSize:      1000,
-				ThumbnailWidth: 200,
-				Quality:        75,
-			},
-		}, &PassConfig{
-			Composites: map[string]string{},
-			PassTypes:  map[string]PassTypeConfig{},
-			Passes:     PassesConfig{FolderIncludes: map[string]string{}},
-		}
+type PassConfig struct {
+	Composites map[string]string         `toml:"composites"`
+	PassTypes  map[string]PassTypeConfig `toml:"passTypes"`
+	Passes     PassesConfig              `toml:"passes"`
 }
 
-func LoadConfig(coreConfigPath string) (*AppConfig, *PassConfig, error) {
-	cfg, passesCfg := DefaultConfig()
+type SettingsTree map[string]any
+type SettingsFlat map[string]any
 
-	// Load main config.toml
-	if _, err := os.Stat(coreConfigPath); err == nil {
-		data, err := os.ReadFile(coreConfigPath)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to read core config file: %w", err)
+var (
+	treeStore atomic.Value // SettingsTree
+	flatStore atomic.Value // SettingsFlat
+	mu        sync.Mutex
+)
+
+func flatten(prefix string, in map[string]any, out map[string]any) {
+	for k, v := range in {
+		key := k
+		if prefix != "" {
+			key = prefix + "." + k
 		}
-		if err := toml.Unmarshal(data, cfg); err != nil {
-			return nil, nil, fmt.Errorf("failed to parse core TOML config: %w", err)
+
+		switch val := v.(type) {
+		case map[string]any:
+			flatten(key, val, out)
+		default:
+			out[key] = val
 		}
 	}
-
-	// Ensure directories exist
-	if err := cfg.ensureDirectories(); err != nil {
-		return nil, nil, fmt.Errorf("failed to create directories: %w", err)
-	}
-
-	return cfg, passesCfg, nil
 }
 
-func (c *AppConfig) ensureDirectories() error {
-	dirs := []string{
-		c.Paths.DataDir,
-		c.Paths.LiveOutputDir,
-		c.Paths.LogDir,
+func Load(path string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("read config: %w", err)
 	}
-	for _, dir := range dirs {
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf("failed to create directory %s: %w", dir, err)
-		}
+
+	var raw map[string]any
+	if err := toml.Unmarshal(data, &raw); err != nil {
+		return fmt.Errorf("parse config: %w", err)
 	}
-	if c.Paths.ThumbnailDir != "" {
-		if err := os.MkdirAll(c.Paths.ThumbnailDir, 0755); err != nil {
-			return fmt.Errorf("failed to create directory %s: %w", c.Paths.ThumbnailDir, err)
-		}
-	}
+
+	tree := SettingsTree(raw)
+	flat := make(SettingsFlat)
+
+	flatten("", tree, flat)
+
+	treeStore.Store(tree)
+	flatStore.Store(flat)
+
 	return nil
 }
 
-func SaveConfig(path string, cfg *AppConfig) error {
-	data, err := toml.Marshal(cfg)
-	if err != nil {
+func Get(key string) (any, bool) {
+	flat := flatStore.Load().(SettingsFlat)
+	v, ok := flat[key]
+	return v, ok
+}
+
+func MustGet(key string) any {
+	v, ok := Get(key)
+	if !ok {
+		panic("missing config key: " + key)
+	}
+	return v
+}
+
+func GetString(key string) string {
+	if v, ok := Get(key); ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return "nilStrAddr"
+}
+
+func GetInt(key string) int {
+	if v, ok := Get(key); ok {
+		switch val := v.(type) {
+		case int64:
+			return int(val)
+		case float64:
+			return int(val)
+		case int:
+			return val
+		}
+	}
+	return 0
+}
+
+func GetBool(key string) bool {
+	if v, ok := Get(key); ok {
+		if b, ok := v.(bool); ok {
+			return b
+		}
+	}
+	return false
+}
+
+func GetNode(path string) (map[string]any, bool) {
+	tree := treeStore.Load().(SettingsTree)
+
+	parts := strings.Split(path, ".")
+	var current any = tree
+
+	for _, p := range parts {
+		m, ok := current.(map[string]any)
+		if !ok {
+			return nil, false
+		}
+		current, ok = m[p]
+		if !ok {
+			return nil, false
+		}
+	}
+
+	out, ok := current.(map[string]any)
+	return out, ok
+}
+
+// Set
+
+func setInTree(tree map[string]any, key string, value any) error {
+	parts := strings.Split(key, ".")
+	last := len(parts) - 1
+
+	current := tree
+	for i, p := range parts {
+		if i == last {
+			current[p] = value
+			return nil
+		}
+
+		next, ok := current[p]
+		if !ok {
+			newMap := make(map[string]any)
+			current[p] = newMap
+			current = newMap
+			continue
+		}
+
+		m, ok := next.(map[string]any)
+		if !ok {
+			return fmt.Errorf("path conflict at %s", p)
+		}
+
+		current = m
+	}
+
+	return nil
+}
+
+func Set(key string, value any) error {
+	mu.Lock()
+	defer mu.Unlock()
+
+	tree := treeStore.Load().(SettingsTree)
+
+	if err := setInTree(tree, key, value); err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0644)
+
+	newFlat := make(SettingsFlat)
+	flatten("", tree, newFlat)
+
+	treeStore.Store(tree)
+	flatStore.Store(newFlat)
+
+	return nil
+}
+
+// Defaults & Loaders
+
+func makeDirectories() error {
+	dirs := []string{
+		GetString("paths.data"),
+		GetString("paths.live_output"),
+		GetString("paths.logs"),
+		GetString("paths.thumbnails"),
+	}
+	for _, dir := range dirs {
+		if dir != "" {
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				return fmt.Errorf("failed to create directory %s: %w", dir, err)
+			}
+		}
+	}
+	return nil
 }

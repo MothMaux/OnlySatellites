@@ -3,6 +3,7 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -19,8 +20,7 @@ import (
 )
 
 type HardwareHandler struct {
-	Cfg     *config.AppConfig
-	Store   *com.LocalDataStore
+	Store   *sql.DB
 	Timeout time.Duration
 }
 
@@ -115,7 +115,7 @@ func (h *InfoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (h *HardwareHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	mode := "native"
 	if h.Store != nil {
-		if v, err := h.Store.GetSetting(r.Context(), "hwmonitor"); err == nil && v != "" {
+		if v, err := com.GetSetting(h.Store, r.Context(), "hwmonitor"); err == nil && v != "" {
 			mode = v
 		}
 	}
@@ -158,7 +158,7 @@ func (h *HardwareHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), to)
 		defer cancel()
 
-		snap, err := metrics.CollectNative(ctx, h.Cfg.Paths.LiveOutputDir)
+		snap, err := metrics.CollectNative(ctx, config.GetString("paths.live_output"))
 		if err != nil {
 			http.Error(w, "failed to collect hardware metrics: "+err.Error(), http.StatusInternalServerError)
 			return

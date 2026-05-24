@@ -15,26 +15,24 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"OnlySats/com"
 	"OnlySats/com/shared"
+	"OnlySats/config"
 	"OnlySats/handlers"
 )
 
 func (s *Server) setupUpdateRoutes(r *mux.Router) {
 	cd := time.Minute
-	if settingVal, err := s.cfg.LocalStore.GetSetting(context.Background(), "update_cd"); err == nil {
+	if settingVal, err := com.GetSetting(s.cfg.LocalStore, context.Background(), "update_cd"); err == nil {
 		if n, err := strconv.ParseInt(strings.TrimSpace(settingVal), 10, 64); err == nil && n > 0 {
 			cd = time.Duration(n) * time.Second
 		}
 	}
 
 	upd := &handlers.UpdateHandler{
-		Cfg:      s.cfg.AppConfig,
-		Pass:     s.cfg.PassConfig,
 		Cooldown: cd,
 	}
 	rpl := &handlers.RepopulateHandler{
-		Cfg:      s.cfg.AppConfig,
-		Pass:     s.cfg.PassConfig,
 		Cooldown: time.Minute,
 	}
 
@@ -58,7 +56,6 @@ func (s *Server) setupMiscRoutes(r *mux.Router) {
 
 	// Hardware monitor handler
 	hw := &handlers.HardwareHandler{
-		Cfg:     s.cfg.AppConfig,
 		Store:   s.cfg.LocalStore,
 		Timeout: 3 * time.Second,
 	}
@@ -67,6 +64,7 @@ func (s *Server) setupMiscRoutes(r *mux.Router) {
 	r.Handle("/local/api/info", info).Methods("GET")
 
 	// CSS and admin routes
+	liveOut := config.GetString("paths.live_output")
 	r.Handle("/colors.css", &handlers.ColorsCSSHandler{Store: s.cfg.LocalStore})
 	r.Handle("/local/stats", s.requireAuth(3, s.serveEmbeddedHTML("stats.html", htmlFS))).Methods("GET")
 	r.Handle("/local/admin", s.requireAuth(1, s.serveEmbeddedHTML("admin-center.html", htmlFS))).Methods("GET")
@@ -76,8 +74,8 @@ func (s *Server) setupMiscRoutes(r *mux.Router) {
 	r.Handle("/local/admin/satdump", s.requireAuth(1, s.serveEmbeddedHTML("admin-sat.html", partialFS))).Methods("GET")
 	r.Handle("/local/admin/passes", s.requireAuth(1, s.serveEmbeddedHTML("admin-pss.html", partialFS))).Methods("GET")
 	r.Handle("/local/admin/images", s.requireAuth(1, s.serveEmbeddedHTML("admin-img.html", partialFS))).Methods("GET")
-	r.Handle("/local/api/disk-stats", s.requireAuth(3, http.HandlerFunc(handlers.ServeDiskStats(s.cfg.AppConfig.Paths.LiveOutputDir)))).Methods("GET")
-	r.Handle("/local/api/rotate-pass", s.requireAuth(3, http.HandlerFunc(handlers.ServeRotatePass180(s.cfg.AppConfig.Paths.LiveOutputDir, s.cfg.AppConfig.Paths.ThumbnailDir)))).Methods("POST")
+	r.Handle("/local/api/disk-stats", s.requireAuth(3, http.HandlerFunc(handlers.ServeDiskStats(liveOut)))).Methods("GET")
+	r.Handle("/local/api/rotate-pass", s.requireAuth(3, http.HandlerFunc(handlers.ServeRotatePass180(liveOut, config.GetString("paths.thumbnails"))))).Methods("POST")
 
 	// API endpoints
 	r.Handle("/api/stats", s.requireAuth(3, http.HandlerFunc(s.handleStats))).Methods("GET")
@@ -138,7 +136,7 @@ func (s *Server) setupMiscRoutes(r *mux.Router) {
 // handleStats returns server statistics
 func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	stats := map[string]interface{}{
+	stats := map[string]any{
 		"startTime": s.cfg.StartTime.Unix(),
 		"uptime":    time.Since(s.cfg.StartTime).Seconds(),
 	}
@@ -200,7 +198,7 @@ func (s *Server) setupSatdumpRoutes(r *mux.Router) {
 			return "", 0, fmt.Errorf("empty")
 		}
 
-		if row, err := s.cfg.LocalStore.GetSatdump(ctx, name); err == nil && row != nil {
+		if row, err := com.GetSatdump(s.cfg.LocalStore, ctx, name); err == nil && row != nil {
 			ip := strings.TrimSpace(row.Address)
 			if ip == "" {
 				ip = shared.GetHostIPv4()
@@ -212,7 +210,7 @@ func (s *Server) setupSatdumpRoutes(r *mux.Router) {
 			return ip, port, nil
 		}
 		want := norm(name)
-		list, _ := s.cfg.LocalStore.ListSatdump(ctx)
+		list, _ := com.ListSatdump(s.cfg.LocalStore, ctx)
 		for _, sd := range list {
 			if norm(sd.Name) == want {
 				ip := strings.TrimSpace(sd.Address)
@@ -230,7 +228,7 @@ func (s *Server) setupSatdumpRoutes(r *mux.Router) {
 	}
 
 	firstInstance := func(ctx context.Context) (string, bool) {
-		list, err := s.cfg.LocalStore.ListSatdump(ctx)
+		list, err := com.ListSatdump(s.cfg.LocalStore, ctx)
 		if err != nil || len(list) == 0 {
 			return "", false
 		}
@@ -312,12 +310,12 @@ func (s *Server) setupSatdumpRoutes(r *mux.Router) {
 		rateMS := 500
 		spanSec := 300
 
-		if v, _ := s.cfg.LocalStore.GetSetting(r.Context(), "satdump_rate"); strings.TrimSpace(v) != "" {
+		if v, _ := com.GetSetting(s.cfg.LocalStore, r.Context(), "satdump_rate"); strings.TrimSpace(v) != "" {
 			if n, err := strconv.Atoi(strings.TrimSpace(v)); err == nil && n > 0 {
 				rateMS = n
 			}
 		}
-		if v, _ := s.cfg.LocalStore.GetSetting(r.Context(), "satdump_span"); strings.TrimSpace(v) != "" {
+		if v, _ := com.GetSetting(s.cfg.LocalStore, r.Context(), "satdump_span"); strings.TrimSpace(v) != "" {
 			if n, err := strconv.Atoi(strings.TrimSpace(v)); err == nil && n > 0 {
 				spanSec = n
 			}

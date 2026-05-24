@@ -10,15 +10,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"OnlySats/com/shared"
 )
 
 type APIHandler struct {
-	DB *shared.Database
+	DB *sql.DB
 }
 
-func NewAPIHandler(db *shared.Database) *APIHandler {
+func NewAPIHandler(db *sql.DB) *APIHandler {
 	return &APIHandler{DB: db}
 }
 

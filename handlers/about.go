@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"crypto/sha1"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"image"
@@ -22,7 +23,7 @@ import (
 
 // AboutHandler wires HTTP to LocalDataStore About* methods
 type AboutHandler struct {
-	Store *com.LocalDataStore
+	Store *sql.DB
 }
 
 // ---------- DTOs ----------
@@ -54,9 +55,9 @@ type setMetaReq struct {
 func (h *AboutHandler) Get(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	body, updated, _ := h.Store.GetAboutBody(ctx)
-	imgs, _ := h.Store.ListAboutImages(ctx)
-	meta, _ := h.Store.GetAllAboutMeta(ctx)
+	body, updated, _ := com.GetAboutBody(h.Store, ctx)
+	imgs, _ := com.ListAboutImages(h.Store, ctx)
+	meta, _ := com.GetAllAboutMeta(h.Store, ctx)
 
 	resp := aboutAggregate{
 		Body: body,
@@ -73,7 +74,7 @@ func (h *AboutHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AboutHandler) GetBody(w http.ResponseWriter, r *http.Request) {
-	body, updated, err := h.Store.GetAboutBody(r.Context())
+	body, updated, err := com.GetAboutBody(h.Store, r.Context())
 	if err != nil {
 		http.Error(w, "failed to read about body", http.StatusInternalServerError)
 		return
@@ -90,7 +91,7 @@ func (h *AboutHandler) GetBody(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AboutHandler) ListImages(w http.ResponseWriter, r *http.Request) {
-	imgs, err := h.Store.ListAboutImages(r.Context())
+	imgs, err := com.ListAboutImages(h.Store, r.Context())
 	if err != nil {
 		http.Error(w, "failed to list images", http.StatusInternalServerError)
 		return
@@ -99,7 +100,7 @@ func (h *AboutHandler) ListImages(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AboutHandler) GetMeta(w http.ResponseWriter, r *http.Request) {
-	meta, err := h.Store.GetAllAboutMeta(r.Context())
+	meta, err := com.GetAllAboutMeta(h.Store, r.Context())
 	if err != nil {
 		http.Error(w, "failed to read metadata", http.StatusInternalServerError)
 		return
@@ -115,7 +116,7 @@ func (h *AboutHandler) PutBody(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid JSON", http.StatusBadRequest)
 		return
 	}
-	if err := h.Store.SetAboutBody(r.Context(), req.Body); err != nil {
+	if err := com.SetAboutBody(h.Store, r.Context(), req.Body); err != nil {
 		http.Error(w, "failed to save body", http.StatusInternalServerError)
 		return
 	}
@@ -123,7 +124,7 @@ func (h *AboutHandler) PutBody(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AboutHandler) DeleteBody(w http.ResponseWriter, r *http.Request) {
-	if err := h.Store.DeleteAboutBody(r.Context()); err != nil {
+	if err := com.DeleteAboutBody(h.Store, r.Context()); err != nil {
 		http.Error(w, "failed to delete body", http.StatusInternalServerError)
 		return
 	}
@@ -178,7 +179,7 @@ func (h *AboutHandler) UploadImage(w http.ResponseWriter, r *http.Request) {
 	}
 	mimeType := "image/jpeg"
 
-	id, err := h.Store.AddAboutImageBlobFlexible(r.Context(), out.Bytes(), mimeType, wpx, hpx, "", 0)
+	id, err := com.AddAboutImageBlobFlexible(h.Store, r.Context(), out.Bytes(), mimeType, wpx, hpx, "", 0)
 	if err != nil {
 		log.Printf("UploadImage: insert failed: %v", err)
 		http.Error(w, "db insert failed", http.StatusInternalServerError)
@@ -212,7 +213,7 @@ func (h *AboutHandler) UpdateImage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no fields to update", http.StatusBadRequest)
 		return
 	}
-	if err := h.Store.UpdateAboutImage(r.Context(), id, req.Path, req.Caption, req.Sort); err != nil {
+	if err := com.UpdateAboutImage(h.Store, r.Context(), id, req.Path, req.Caption, req.Sort); err != nil {
 		http.Error(w, "failed to update image", http.StatusInternalServerError)
 		return
 	}
@@ -225,7 +226,7 @@ func (h *AboutHandler) DeleteImage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err := h.Store.RemoveAboutImage(r.Context(), id); err != nil {
+	if err := com.RemoveAboutImage(h.Store, r.Context(), id); err != nil {
 		http.Error(w, "failed to delete image", http.StatusInternalServerError)
 		return
 	}
@@ -238,7 +239,7 @@ func (h *AboutHandler) RawImage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad id", http.StatusBadRequest)
 		return
 	}
-	data, mimeType, createdAt, err := h.Store.GetAboutImageBlob(r.Context(), id)
+	data, mimeType, createdAt, err := com.GetAboutImageBlob(h.Store, r.Context(), id)
 	if err != nil || len(data) == 0 {
 		http.NotFound(w, r)
 		return
@@ -272,7 +273,7 @@ func (h *AboutHandler) PutMeta(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "key and value required", http.StatusBadRequest)
 		return
 	}
-	if err := h.Store.SetAboutMeta(r.Context(), key, req.Value); err != nil {
+	if err := com.SetAboutMeta(h.Store, r.Context(), key, req.Value); err != nil {
 		http.Error(w, "failed to save metadata", http.StatusInternalServerError)
 		return
 	}
@@ -285,7 +286,7 @@ func (h *AboutHandler) DeleteMeta(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "key required", http.StatusBadRequest)
 		return
 	}
-	if err := h.Store.DeleteAboutMeta(r.Context(), key); err != nil {
+	if err := com.DeleteAboutMeta(h.Store, r.Context(), key); err != nil {
 		http.Error(w, "failed to delete metadata", http.StatusInternalServerError)
 		return
 	}

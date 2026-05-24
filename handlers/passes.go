@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/url"
@@ -11,10 +12,10 @@ import (
 )
 
 type TemplatesAdminAPI struct {
-	Prefs *com.LocalDataStore
+	Prefs *sql.DB
 }
 
-func NewTemplatesAdminAPI(prefs *com.LocalDataStore) *TemplatesAdminAPI {
+func NewTemplatesAdminAPI(prefs *sql.DB) *TemplatesAdminAPI {
 	return &TemplatesAdminAPI{Prefs: prefs}
 }
 
@@ -71,7 +72,7 @@ type (
 
 func (h *TemplatesAdminAPI) ListPassTypes(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	rows, err := h.Prefs.ListPassTypes(ctx)
+	rows, err := com.ListPassTypes(h.Prefs, ctx)
 	if err != nil {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
 		return
@@ -93,7 +94,7 @@ func (h *TemplatesAdminAPI) UpsertPassType(w http.ResponseWriter, r *http.Reques
 		badRequest(w, "code required")
 		return
 	}
-	_, err := h.Prefs.UpsertPassType(r.Context(), in.Code, in.DatasetFile, in.RawDataFile, in.Downlink)
+	_, err := com.UpsertPassType(h.Prefs, r.Context(), in.Code, in.DatasetFile, in.RawDataFile, in.Downlink)
 	if err != nil {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
 		return
@@ -110,7 +111,7 @@ func (h *TemplatesAdminAPI) DeletePassType(w http.ResponseWriter, r *http.Reques
 	if u, err := url.PathUnescape(code); err == nil {
 		code = u
 	}
-	if err := h.Prefs.DeletePassType(r.Context(), code); err != nil {
+	if err := com.DeletePassType(h.Prefs, r.Context(), code); err != nil {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
 		return
 	}
@@ -119,7 +120,7 @@ func (h *TemplatesAdminAPI) DeletePassType(w http.ResponseWriter, r *http.Reques
 
 func (h *TemplatesAdminAPI) ListFolderIncludes(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	rows, err := h.Prefs.ListFolderIncludes(ctx)
+	rows, err := com.ListFolderIncludes(h.Prefs, ctx)
 	if err != nil {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
 		return
@@ -141,7 +142,7 @@ func (h *TemplatesAdminAPI) UpsertFolderInclude(w http.ResponseWriter, r *http.R
 		badRequest(w, "prefix and pass_type_code required")
 		return
 	}
-	_, err := h.Prefs.UpsertFolderInclude(r.Context(), in.Prefix, in.PassTypeCode)
+	_, err := com.UpsertFolderInclude(h.Prefs, r.Context(), in.Prefix, in.PassTypeCode)
 	if err != nil {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
 		return
@@ -158,7 +159,7 @@ func (h *TemplatesAdminAPI) DeleteFolderInclude(w http.ResponseWriter, r *http.R
 	if u, err := url.PathUnescape(prefix); err == nil {
 		prefix = u
 	}
-	if err := h.Prefs.DeleteFolderInclude(r.Context(), prefix); err != nil {
+	if err := com.DeleteFolderInclude(h.Prefs, r.Context(), prefix); err != nil {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
 		return
 	}
@@ -174,7 +175,7 @@ func (h *TemplatesAdminAPI) ListImageDirRules(w http.ResponseWriter, r *http.Req
 	if u, err := url.PathUnescape(code); err == nil {
 		code = u
 	}
-	rows, err := h.Prefs.ListImageDirRules(r.Context(), code)
+	rows, err := com.ListImageDirRules(h.Prefs, r.Context(), code)
 	if err != nil {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
 		return
@@ -203,7 +204,7 @@ func (h *TemplatesAdminAPI) UpsertImageDirRule(w http.ResponseWriter, r *http.Re
 		return
 	}
 	// Allow empty dir_name to represent root
-	if _, err := h.Prefs.UpsertImageDirRule(r.Context(), code, in.DirName, in.Sensor, in.IsFilled, in.VPix, in.IsCorrected, in.Composite); err != nil {
+	if _, err := com.UpsertImageDirRule(h.Prefs, r.Context(), code, in.DirName, in.Sensor, in.IsFilled, in.VPix, in.IsCorrected, in.Composite); err != nil {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
 		return
 	}
@@ -227,7 +228,7 @@ func (h *TemplatesAdminAPI) DeleteImageDirRule(w http.ResponseWriter, r *http.Re
 	if u, err := url.PathUnescape(dir); err == nil {
 		dir = u
 	}
-	if err := h.Prefs.DeleteImageDirRule(r.Context(), code, dir); err != nil {
+	if err := com.DeleteImageDirRule(h.Prefs, r.Context(), code, dir); err != nil {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
 		return
 	}
@@ -236,7 +237,7 @@ func (h *TemplatesAdminAPI) DeleteImageDirRule(w http.ResponseWriter, r *http.Re
 
 func (h *TemplatesAdminAPI) ListComposites(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	rows, err := h.Prefs.ListConfiguredComposites(ctx)
+	rows, err := com.ListConfiguredComposites(h.Prefs, ctx)
 	if err != nil {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
 		return
@@ -263,7 +264,7 @@ func (h *TemplatesAdminAPI) UpsertComposite(w http.ResponseWriter, r *http.Reque
 	if in.Enabled != nil {
 		en = *in.Enabled
 	}
-	if err := h.Prefs.UpsertComposite(r.Context(), in.Key, in.Name, en); err != nil {
+	if err := com.UpsertComposite(h.Prefs, r.Context(), in.Key, in.Name, en); err != nil {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
 		return
 	}
@@ -279,7 +280,7 @@ func (h *TemplatesAdminAPI) DeleteComposite(w http.ResponseWriter, r *http.Reque
 	if u, err := url.PathUnescape(key); err == nil {
 		key = u
 	}
-	if err := h.Prefs.DeleteComposite(r.Context(), key); err != nil {
+	if err := com.DeleteComposite(h.Prefs, r.Context(), key); err != nil {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
 		return
 	}

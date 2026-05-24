@@ -20,7 +20,7 @@ import (
 
 // wires message APIs to the LocalDataStore.
 type MessagesHandler struct {
-	Store *com.LocalDataStore
+	Store *sql.DB
 }
 
 func (h *MessagesHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -38,7 +38,7 @@ func (h *MessagesHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	rows, err := h.Store.ListMessages(r.Context(), limit, offset)
+	rows, err := com.ListMessages(h.Store, r.Context(), limit, offset)
 	if err != nil {
 		serverErr(w, err) // uses your helpers
 		return
@@ -116,7 +116,7 @@ func (h *MessagesHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := h.Store.AddMessage(r.Context(), title, body, typ, imgBytes, when)
+	id, err := com.AddMessage(h.Store, r.Context(), title, body, typ, imgBytes, when)
 	if err != nil {
 		serverErr(w, err)
 		return
@@ -154,7 +154,7 @@ func (h *MessagesHandler) RawImage(w http.ResponseWriter, r *http.Request) {
 var errNoImage = errors.New("no image")
 
 func (h *MessagesHandler) getMessageImage(ctx context.Context, id int64) ([]byte, string, error) {
-	m, err := h.Store.GetMessage(ctx, id)
+	m, err := com.GetMessage(h.Store, ctx, id)
 	if err != nil {
 		return nil, "", err
 	}
@@ -235,7 +235,7 @@ func getVars(r *http.Request) map[string]string {
 
 func (h *MessagesHandler) Latest(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
-	rows, err := h.Store.ListMessagesBefore(r.Context(), now, 10)
+	rows, err := com.ListMessagesBefore(h.Store, r.Context(), now, 10)
 	if err != nil {
 		serverErr(w, err)
 		return
@@ -278,7 +278,7 @@ func (h *MessagesHandler) Get(w http.ResponseWriter, r *http.Request) {
 		badRequest(w, err.Error())
 		return
 	}
-	m, err := h.Store.GetMessage(r.Context(), id)
+	m, err := com.GetMessage(h.Store, r.Context(), id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			notFound(w, "message not found")
@@ -352,12 +352,12 @@ func (h *MessagesHandler) Update(w http.ResponseWriter, r *http.Request) {
 		imgBytes = data
 		imgSet = true
 	} else if err == http.ErrMissingFile {
-	} else if err != nil {
+	} else {
 		badRequest(w, "image upload error: "+err.Error())
 		return
 	}
 
-	if err := h.Store.UpdateMessage(r.Context(), id, titlePtr, msgPtr, typePtr, func() []byte {
+	if err := com.UpdateMessage(h.Store, r.Context(), id, titlePtr, msgPtr, typePtr, func() []byte {
 		if imgSet {
 			return imgBytes
 		}
@@ -382,7 +382,7 @@ func (h *MessagesHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		badRequest(w, err.Error())
 		return
 	}
-	if err := h.Store.DeleteMessage(r.Context(), id); err != nil {
+	if err := com.DeleteMessage(h.Store, r.Context(), id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			notFound(w, "not found")
 			return

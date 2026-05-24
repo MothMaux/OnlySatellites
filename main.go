@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"github.com/gorilla/sessions"
@@ -25,11 +26,10 @@ var embeddedFiles embed.FS
 
 // Application holds all the application state and dependencies
 type Application struct {
-	config       *config.AppConfig
 	passConfig   *config.PassConfig
-	db           *shared.Database
+	db           *sql.DB
 	anal         *sql.DB
-	localStore   *com.LocalDataStore
+	localStore   *sql.DB
 	sessionStore *sessions.CookieStore
 	tempAdmin    *com.EphemeralAdmin
 	startTime    time.Time
@@ -45,6 +45,12 @@ func NewApplication() (*Application, error) {
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
+	app.passConfig = &config.PassConfig{
+		Composites: map[string]string{},
+		PassTypes:  map[string]config.PassTypeConfig{},
+		Passes:     config.PassesConfig{FolderIncludes: map[string]string{}},
+	}
+
 	if err := app.initializeStores(); err != nil {
 		return nil, fmt.Errorf("failed to initialize stores: %w", err)
 	}
@@ -57,13 +63,19 @@ func (app *Application) Close() error {
 	var errs []error
 
 	if app.localStore != nil {
-		if err := app.localStore.Close(); err != nil {
+		if err := shared.CloseDatabase(app.localStore); err != nil {
 			errs = append(errs, fmt.Errorf("local store close: %w", err))
 		}
 	}
 
 	if app.db != nil {
-		if err := app.db.Close(); err != nil {
+		if err := shared.CloseDatabase(app.db); err != nil {
+			errs = append(errs, fmt.Errorf("database close: %w", err))
+		}
+	}
+
+	if app.anal != nil {
+		if err := shared.CloseDatabase(app.anal); err != nil {
 			errs = append(errs, fmt.Errorf("database close: %w", err))
 		}
 	}
@@ -76,42 +88,36 @@ func (app *Application) Close() error {
 }
 
 func (app *Application) loadConfig() error {
-	var err error
-	app.config, app.passConfig, err = config.LoadConfig("config.toml")
+	err := config.Load("config.toml")
 	return err
 }
 
 func (app *Application) initializeStores() error {
-	// Init local data store (toml)
 	var err error
-	app.localStore, err = com.OpenLocalData(app.config)
+	dataDir := config.GetString("paths.data")
+
+	app.localStore, err = shared.OpenDatabase(filepath.Join(dataDir, "local_data.db"))
 	if err != nil {
 		return fmt.Errorf("local data init: %w", err)
 	}
 
-	// Init sqlite3 for image meta and settings
-	dbCfg, err := shared.NewConfigFromAppConfig(app.config)
-	if err != nil {
-		return fmt.Errorf("database config: %w", err)
-	}
-
-	app.db, err = shared.OpenDatabase(dbCfg)
+	app.db, err = shared.OpenDatabase(filepath.Join(dataDir, "image_metadata.db"))
 	if err != nil {
 		return fmt.Errorf("database open: %w", err)
 	}
 
-	// Init session store (signed + encrypted)
-	keys, err := com.LoadOrGenerateSessionKeys(app.config.Paths.DataDir)
-	if err != nil {
-		return fmt.Errorf("session key init: %w", err)
-	}
-
-	app.anal, err = shared.OpenAnalDB(app.config.Paths.DataDir)
+	app.anal, err = shared.OpenDatabase(filepath.Join(dataDir, "aggregateData.db"))
 	if err != nil {
 		return fmt.Errorf("analytics db open: %w", err)
 	}
 	if err := shared.InitSchema(app.anal); err != nil {
 		return fmt.Errorf("analytics schema: %w", err)
+	}
+
+	// Init session store (signed + encrypted)
+	keys, err := com.LoadOrGenerateSessionKeys(dataDir)
+	if err != nil {
+		return fmt.Errorf("session key init: %w", err)
 	}
 
 	secure := true
@@ -122,12 +128,16 @@ func (app *Application) initializeStores() error {
 
 func (app *Application) runStartupTasks() error {
 	// Run database update
-	if err := com.RunDBUpdate(app.config, app.passConfig, false); err != nil {
+	if err := com.OpenLocalData(); err != nil {
+		return fmt.Errorf("could not prepare databases %w", err)
+	}
+
+	if err := com.RunDBUpdate(app.passConfig, false); err != nil {
 		return fmt.Errorf("database update: %w", err)
 	}
 
 	// Generate thumbnails
-	if err := com.RunThumbGen(app.config, app.db.DB); err != nil {
+	if err := com.RunThumbGen(app.db); err != nil {
 		return fmt.Errorf("thumbnail generation: %w", err)
 	}
 	log.Println("Data initialized")
@@ -135,7 +145,7 @@ func (app *Application) runStartupTasks() error {
 }
 
 func (app *Application) startStationProxy() {
-	if !app.config.StationProxy.Enabled {
+	/** if !app.config.StationProxy.Enabled {
 		return
 	}
 
@@ -144,7 +154,8 @@ func (app *Application) startStationProxy() {
 		log.Printf("Station proxy error: %v", err)
 	} else {
 		log.Printf("Station hosted at stations.onlysatellites.com/%s", app.config.StationProxy.StationId)
-	}
+	} */
+	log.Printf("Automatic Station Proxying Disabled")
 }
 
 func (app *Application) initializeAuthDB() error {
@@ -205,7 +216,7 @@ func main() {
 		log.Printf("Startup warning: %v", err)
 	}
 
-	app.startStationProxy()
+	//app.startStationProxy()
 
 	if err := app.initializeAuthDB(); err != nil {
 		log.Fatal("failed to initialize auth: %w", err)
@@ -213,8 +224,6 @@ func main() {
 
 	// Create server with all dependencies
 	srv := server.New(server.Config{
-		AppConfig:    app.config,
-		PassConfig:   app.passConfig,
 		DB:           app.db,
 		AnalDB:       app.anal,
 		LocalStore:   app.localStore,
@@ -225,18 +234,19 @@ func main() {
 	})
 
 	router := srv.CreateRouter()
-	go com.RunScheduledTasks(app.config)
+	port := config.GetString("server.port")
+	//go com.RunScheduledTasks(app.config)
 
 	// start server with proper timeouts
 	httpServer := &http.Server{
-		Addr:              app.config.Server.Port,
+		Addr:              port,
 		Handler:           router,
-		ReadTimeout:       time.Duration(app.config.Server.ReadTimeout) * time.Second,
-		WriteTimeout:      time.Duration(app.config.Server.WriteTimeout) * time.Second,
+		ReadTimeout:       time.Duration(config.GetInt("server.read_timeout")) * time.Second,
+		WriteTimeout:      time.Duration(config.GetInt("server.write_timeout")) * time.Second,
 		ReadHeaderTimeout: 10 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
-	log.Printf("Server running at http://localhost%s", app.config.Server.Port)
+	log.Printf("Server running at http://localhost%s", port)
 	if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}

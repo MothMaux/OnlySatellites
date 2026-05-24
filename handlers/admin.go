@@ -3,6 +3,7 @@ package handlers
 import (
 	"OnlySats/com"
 	"OnlySats/com/shared"
+	"database/sql"
 	"encoding/json"
 	"io/fs"
 	"log"
@@ -100,7 +101,7 @@ func dirSize(root string, recentOnly bool, cutoff time.Time) uint64 {
 }
 
 type UsersHandler struct {
-	Store *com.LocalDataStore
+	Store *sql.DB
 }
 
 type userRow struct {
@@ -139,7 +140,7 @@ type resetPasswordResp struct {
 }
 
 func (h *UsersHandler) List(w http.ResponseWriter, r *http.Request) {
-	users, err := h.Store.ListUsers(r.Context())
+	users, err := com.ListUsers(h.Store, r.Context())
 	if err != nil {
 		http.Error(w, "failed to list users", http.StatusInternalServerError)
 		return
@@ -161,7 +162,7 @@ func (h *UsersHandler) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "level must be 0..10", http.StatusBadRequest)
 		return
 	}
-	id, err := h.Store.CreateUser(r.Context(), req.Username, req.Level, req.Password)
+	id, err := com.CreateUser(h.Store, r.Context(), req.Username, req.Level, req.Password)
 	if err != nil {
 		// unique constraint or other DB error
 		http.Error(w, "create user failed", http.StatusConflict)
@@ -180,7 +181,7 @@ func (h *UsersHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err := h.Store.DeleteUser(r.Context(), id); err != nil {
+	if err := com.DeleteUser(h.Store, r.Context(), id); err != nil {
 		http.Error(w, "failed to delete user", http.StatusNotFound)
 		return
 	}
@@ -198,7 +199,7 @@ func (h *UsersHandler) SetUsername(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "username required", http.StatusBadRequest)
 		return
 	}
-	if err := h.Store.UpdateUsername(r.Context(), id, req.Username); err != nil {
+	if err := com.UpdateUsername(h.Store, r.Context(), id, req.Username); err != nil {
 		http.Error(w, "failed to update username (maybe not unique?)", http.StatusConflict)
 		return
 	}
@@ -220,7 +221,7 @@ func (h *UsersHandler) SetLevel(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "level must be 0..10", http.StatusBadRequest)
 		return
 	}
-	if err := h.Store.UpdateUserLevel(r.Context(), id, req.Level); err != nil {
+	if err := com.UpdateUserLevel(h.Store, r.Context(), id, req.Level); err != nil {
 		http.Error(w, "failed to update level", http.StatusInternalServerError)
 		return
 	}
@@ -249,7 +250,7 @@ func (h *UsersHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.Store.ResetUserPassword(r.Context(), id, pw); err != nil {
+	if err := com.ResetUserPassword(h.Store, r.Context(), id, pw); err != nil {
 		http.Error(w, "failed to reset password", http.StatusInternalServerError)
 		return
 	}

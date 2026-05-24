@@ -1,8 +1,6 @@
 package com
 
 import (
-	shared "OnlySats/com/shared"
-	"OnlySats/config"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -10,10 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 	"time"
 )
 
@@ -171,6 +166,7 @@ func startSatdumpLogger(ctx context.Context, db *sql.DB, flushEvery time.Duratio
 	return ch
 }
 
+/**
 func RunScheduledTasks(appCfg *config.AppConfig) {
 	db := must(shared.OpenAnalDB(appCfg.Paths.DataDir))
 	defer db.Close()
@@ -199,4 +195,4 @@ func RunScheduledTasks(appCfg *config.AppConfig) {
 		go satdumpPoller(ctx, logCh, s.Name, endpoint, every)
 	}
 	<-ctx.Done()
-}
+} */

@@ -11,10 +11,10 @@ conn_max_lifetime = 0
 cache_size = 10000
 
 [paths]
-data_dir = 'data'
-live_output_dir = 'C:\\Users\\max\\OneDrive\\Desktop\\live_output'
-thumbnail_dir = ''
-log_dir = 'logs'
+data = 'data'
+live_output = 'live_output'
+thumbnails = ''
+logs = 'logs'
 
 [thumbgen]
 max_workers = 8
