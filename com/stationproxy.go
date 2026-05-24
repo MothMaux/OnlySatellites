@@ -1,17 +1,10 @@
 package com
 
 import (
-	"OnlySats/config"
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
-	"time"
 )
 
 const (
@@ -39,8 +32,8 @@ type registerResponse struct {
 }
 
 // RunStationProxy handles registration and FRPC startup
-func RunStationProxy(cfg *config.AppConfig) error {
-	if !cfg.StationProxy.Enabled {
+/** func RunStationProxy() error {
+	 if !cfg.StationProxy.Enabled {
 		fmt.Println("Station proxy disabled in config.")
 		return nil
 	}
@@ -87,10 +80,6 @@ func RunStationProxy(cfg *config.AppConfig) error {
 	cfg.StationProxy.FrpsAddr = reg.Frps.Addr
 	cfg.StationProxy.FrpsPort = reg.Frps.Port
 
-	if err := config.SaveConfig("config.toml", cfg); err != nil {
-		return fmt.Errorf("failed to save config: %w", err)
-	}
-
 	// Write frpc.toml from response
 	if err := os.WriteFile(frpcConfig, []byte(reg.FrpcToml), 0644); err != nil {
 		return fmt.Errorf("failed to write frpc.toml: %w", err)
@@ -112,7 +101,7 @@ func RunStationProxy(cfg *config.AppConfig) error {
 
 	go cmd.Wait() // don’t block
 	return nil
-}
+} */
 
 func ensureFrpcBinary() (string, error) {
 	osName := runtime.GOOS

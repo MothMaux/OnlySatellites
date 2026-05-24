@@ -20,7 +20,6 @@ import (
 )
 
 type HardwareHandler struct {
-	Cfg     *config.AppConfig
 	Store   *sql.DB
 	Timeout time.Duration
 }
@@ -159,7 +158,7 @@ func (h *HardwareHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), to)
 		defer cancel()
 
-		snap, err := metrics.CollectNative(ctx, h.Cfg.Paths.LiveOutputDir)
+		snap, err := metrics.CollectNative(ctx, config.GetString("paths.live_output"))
 		if err != nil {
 			http.Error(w, "failed to collect hardware metrics: "+err.Error(), http.StatusInternalServerError)
 			return

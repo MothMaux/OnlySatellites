@@ -20,42 +20,32 @@ var processedImages int64
 var skippedImages int64
 var failedImages int64
 
-func RunThumbGen(cfg *config.AppConfig, db *sql.DB) error {
+func RunThumbGen(db *sql.DB) error {
 	// reset counters for each run
 	atomic.StoreInt64(&processedImages, 0)
 	atomic.StoreInt64(&skippedImages, 0)
 	atomic.StoreInt64(&failedImages, 0)
 
-	baseOutputDir := cfg.Paths.LiveOutputDir
-	thumbOutputDir := cfg.Paths.ThumbnailDir
+	baseOutputDir := config.GetString("paths.live_output")
+	thumbOutputDir := config.GetString("paths.thumbnails")
 
-	workers := cfg.Thumbgen.MaxWorkers
+	workers := config.GetInt("thumbgen.max_workers")
 	if workers <= 0 {
-		workers = 4
+		workers = 2
 	}
-	jobBuffer := cfg.Thumbgen.BatchSize
+	jobBuffer := config.GetInt("thumbgen.batch_size")
 	if jobBuffer <= 0 {
-		jobBuffer = 1000
+		jobBuffer = 500
 	}
-	width := cfg.Thumbgen.ThumbnailWidth
+	width := config.GetInt("thumbgen.thumbnail_width")
 	if width <= 0 {
 		width = 200
 	}
-	quality := cfg.Thumbgen.Quality
-	if quality <= 0 {
-		quality = 75
-	}
-	logLevel := strings.ToLower(strings.TrimSpace(cfg.Server.LogLevel))
+	quality := min(max(config.GetInt("thumbgen.quality"), 10), 100)
 
-	// logging to file (buffered)
-	logFile := cfg.Paths.LogDir + "thumbgen.log"
-	if strings.TrimSpace(logFile) == "" {
-		if strings.TrimSpace(cfg.Paths.LogDir) != "" {
-			logFile = filepath.Join(cfg.Paths.LogDir, "thumbgen.log")
-		} else {
-			logFile = "thumbgen.log"
-		}
-	}
+	logLevel := config.GetString("server.logging_level")
+	logFile := filepath.Join(config.GetString("paths.logs") + "thumbgen.log")
+
 	if err := os.MkdirAll(filepath.Dir(logFile), 0o755); err != nil {
 		return fmt.Errorf("failed to create log dir: %w", err)
 	}

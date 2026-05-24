@@ -25,8 +25,7 @@ var embeddedFiles embed.FS
 
 // Application holds all the application state and dependencies
 type Application struct {
-	config       *config.AppConfig
-	passConfig   *config.PassConfig
+	//passConfig   *config.PassConfig
 	db           *sql.DB
 	anal         *sql.DB
 	localStore   *sql.DB
@@ -82,25 +81,25 @@ func (app *Application) Close() error {
 }
 
 func (app *Application) loadConfig() error {
-	var err error
-	app.config, app.passConfig, err = config.LoadConfig("config.toml")
+	err := config.Load("config.toml")
 	return err
 }
 
 func (app *Application) initializeStores() error {
-	// Init local data store (toml)
 	var err error
-	app.localStore, err = shared.OpenDatabase(app.config.Paths.DataDir + "local_data.db")
+	dataDir := config.GetString("paths.data")
+
+	app.localStore, err = shared.OpenDatabase(config.GetString("paths.data") + "local_data.db")
 	if err != nil {
 		return fmt.Errorf("local data init: %w", err)
 	}
 
-	app.db, err = shared.OpenDatabase(app.config.Paths.DataDir + "image_metadata.db")
+	app.db, err = shared.OpenDatabase(dataDir + "image_metadata.db")
 	if err != nil {
 		return fmt.Errorf("database open: %w", err)
 	}
 
-	app.anal, err = shared.OpenDatabase(app.config.Paths.DataDir + "aggregateData.db")
+	app.anal, err = shared.OpenDatabase(dataDir + "aggregateData.db")
 	if err != nil {
 		return fmt.Errorf("analytics db open: %w", err)
 	}
@@ -109,7 +108,7 @@ func (app *Application) initializeStores() error {
 	}
 
 	// Init session store (signed + encrypted)
-	keys, err := com.LoadOrGenerateSessionKeys(app.config.Paths.DataDir)
+	keys, err := com.LoadOrGenerateSessionKeys(dataDir)
 	if err != nil {
 		return fmt.Errorf("session key init: %w", err)
 	}
@@ -122,12 +121,12 @@ func (app *Application) initializeStores() error {
 
 func (app *Application) runStartupTasks() error {
 	// Run database update
-	if err := com.RunDBUpdate(app.config, app.passConfig, false); err != nil {
+	if err := com.RunDBUpdate(false); err != nil {
 		return fmt.Errorf("database update: %w", err)
 	}
 
 	// Generate thumbnails
-	if err := com.RunThumbGen(app.config, app.db); err != nil {
+	if err := com.RunThumbGen(app.db); err != nil {
 		return fmt.Errorf("thumbnail generation: %w", err)
 	}
 	log.Println("Data initialized")
@@ -135,7 +134,7 @@ func (app *Application) runStartupTasks() error {
 }
 
 func (app *Application) startStationProxy() {
-	if !app.config.StationProxy.Enabled {
+	/** if !app.config.StationProxy.Enabled {
 		return
 	}
 
@@ -144,7 +143,8 @@ func (app *Application) startStationProxy() {
 		log.Printf("Station proxy error: %v", err)
 	} else {
 		log.Printf("Station hosted at stations.onlysatellites.com/%s", app.config.StationProxy.StationId)
-	}
+	} */
+	log.Printf("Automatic Station Proxying Disabled")
 }
 
 func (app *Application) initializeAuthDB() error {
@@ -213,8 +213,6 @@ func main() {
 
 	// Create server with all dependencies
 	srv := server.New(server.Config{
-		AppConfig:    app.config,
-		PassConfig:   app.passConfig,
 		DB:           app.db,
 		AnalDB:       app.anal,
 		LocalStore:   app.localStore,
@@ -225,18 +223,19 @@ func main() {
 	})
 
 	router := srv.CreateRouter()
+	port := config.GetString("server.port")
 	//go com.RunScheduledTasks(app.config)
 
 	// start server with proper timeouts
 	httpServer := &http.Server{
-		Addr:              app.config.Server.Port,
+		Addr:              port,
 		Handler:           router,
-		ReadTimeout:       time.Duration(app.config.Server.ReadTimeout) * time.Second,
-		WriteTimeout:      time.Duration(app.config.Server.WriteTimeout) * time.Second,
+		ReadTimeout:       time.Duration(config.GetInt("server.read_timeout")) * time.Second,
+		WriteTimeout:      time.Duration(config.GetInt("server.write_timeout")) * time.Second,
 		ReadHeaderTimeout: 10 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
-	log.Printf("Server running at http://localhost%s", app.config.Server.Port)
+	log.Printf("Server running at http://localhost%s", port)
 	if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}

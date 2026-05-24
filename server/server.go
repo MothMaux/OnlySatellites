@@ -20,8 +20,6 @@ import (
 
 // dependencies used by the server
 type Config struct {
-	AppConfig    *config.AppConfig
-	PassConfig   *config.PassConfig
 	DB           *sql.DB
 	AnalDB       *sql.DB
 	LocalStore   *sql.DB
@@ -80,7 +78,7 @@ func (s *Server) setupGalleryRoutes(r *mux.Router) {
 	apiHandler := handlers.NewAPIHandler(s.cfg.DB)
 	gapi := &handlers.GalleryAPI{
 		DB:            s.cfg.DB,
-		LiveOutputDir: s.cfg.AppConfig.Paths.LiveOutputDir,
+		LiveOutputDir: config.GetString("paths.live_output"),
 		UserContent:   filepath.Join("public", "userContent"),
 		LocalStore:    s.cfg.LocalStore,
 	}
@@ -104,8 +102,9 @@ func (s *Server) setupGalleryRoutes(r *mux.Router) {
 }
 
 func (s *Server) setupImageRoutes(r *mux.Router) {
-	r.PathPrefix("/images/").Handler(handlers.ImageServer(s.cfg.AppConfig.Paths.LiveOutputDir))
-	r.PathPrefix("/thumbnails/").Handler(handlers.ThumbnailServer(s.cfg.AppConfig.Paths.LiveOutputDir, s.cfg.AppConfig.Paths.ThumbnailDir))
+	liveOut := config.GetString("paths.live_output")
+	r.PathPrefix("/images/").Handler(handlers.ImageServer(liveOut))
+	r.PathPrefix("/thumbnails/").Handler(handlers.ThumbnailServer(liveOut, config.GetString("paths.thumbnails")))
 }
 
 func (s *Server) mustSubFS(dir string) http.FileSystem {

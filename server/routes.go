@@ -17,6 +17,7 @@ import (
 
 	"OnlySats/com"
 	"OnlySats/com/shared"
+	"OnlySats/config"
 	"OnlySats/handlers"
 )
 
@@ -29,13 +30,9 @@ func (s *Server) setupUpdateRoutes(r *mux.Router) {
 	}
 
 	upd := &handlers.UpdateHandler{
-		Cfg:      s.cfg.AppConfig,
-		Pass:     s.cfg.PassConfig,
 		Cooldown: cd,
 	}
 	rpl := &handlers.RepopulateHandler{
-		Cfg:      s.cfg.AppConfig,
-		Pass:     s.cfg.PassConfig,
 		Cooldown: time.Minute,
 	}
 
@@ -58,7 +55,6 @@ func (s *Server) setupMiscRoutes(r *mux.Router) {
 
 	// Hardware monitor handler
 	hw := &handlers.HardwareHandler{
-		Cfg:     s.cfg.AppConfig,
 		Store:   s.cfg.LocalStore,
 		Timeout: 3 * time.Second,
 	}
@@ -67,11 +63,12 @@ func (s *Server) setupMiscRoutes(r *mux.Router) {
 	r.Handle("/local/api/info", info).Methods("GET")
 
 	// CSS and admin routes
+	liveOut := config.GetString("paths.live_output")
 	r.Handle("/colors.css", &handlers.ColorsCSSHandler{Store: s.cfg.LocalStore})
 	r.Handle("/local/stats", s.requireAuth(3, s.serveEmbeddedHTML("stats.html", htmlFS))).Methods("GET")
 	r.Handle("/local/admin", s.requireAuth(1, s.serveEmbeddedHTML("admin-center.html", htmlFS))).Methods("GET")
-	r.Handle("/local/api/disk-stats", s.requireAuth(3, http.HandlerFunc(handlers.ServeDiskStats(s.cfg.AppConfig.Paths.LiveOutputDir)))).Methods("GET")
-	r.Handle("/local/api/rotate-pass", s.requireAuth(3, http.HandlerFunc(handlers.ServeRotatePass180(s.cfg.AppConfig.Paths.LiveOutputDir, s.cfg.AppConfig.Paths.ThumbnailDir)))).Methods("POST")
+	r.Handle("/local/api/disk-stats", s.requireAuth(3, http.HandlerFunc(handlers.ServeDiskStats(liveOut)))).Methods("GET")
+	r.Handle("/local/api/rotate-pass", s.requireAuth(3, http.HandlerFunc(handlers.ServeRotatePass180(liveOut, config.GetString("paths.thumbnails"))))).Methods("POST")
 
 	// API endpoints
 	r.Handle("/api/stats", s.requireAuth(3, http.HandlerFunc(s.handleStats))).Methods("GET")

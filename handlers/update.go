@@ -18,8 +18,7 @@ import (
 )
 
 type UpdateHandler struct {
-	Cfg      *config.AppConfig
-	Pass     *config.PassConfig
+	Pass     *com.PassConfig
 	Cooldown time.Duration
 
 	mu       sync.Mutex
@@ -34,8 +33,7 @@ type UpdateHandler struct {
 }
 
 type RepopulateHandler struct {
-	Cfg      *config.AppConfig
-	Pass     *config.PassConfig
+	Pass     *com.PassConfig
 	Cooldown time.Duration
 
 	lastRun  time.Time
@@ -62,16 +60,9 @@ func (h *UpdateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Basic preflight checks
-	if h == nil || h.Cfg == nil {
+	if h == nil || h.Pass == nil {
 		writeJSON(w, http.StatusInternalServerError, updateResp{
 			Message: "server misconfigured: nil AppConfig",
-			Step:    "preflight",
-		})
-		return
-	}
-	if h.Pass == nil {
-		writeJSON(w, http.StatusInternalServerError, updateResp{
-			Message: "server misconfigured: nil PassConfig",
 			Step:    "preflight",
 		})
 		return
@@ -140,16 +131,9 @@ func (h *RepopulateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Basic preflight checks
-	if h == nil || h.Cfg == nil {
+	if h == nil || h.Pass == nil {
 		writeJSON(w, http.StatusInternalServerError, updateResp{
 			Message: "server misconfigured: nil AppConfig",
-			Step:    "preflight",
-		})
-		return
-	}
-	if h.Pass == nil {
-		writeJSON(w, http.StatusInternalServerError, updateResp{
-			Message: "server misconfigured: nil PassConfig",
 			Step:    "preflight",
 		})
 		return
@@ -258,7 +242,7 @@ func (h *UpdateHandler) runDBUpdate(ctx context.Context) error {
 	type result struct{ err error }
 	ch := make(chan result, 1)
 	go func() {
-		err := com.RunDBUpdate(h.Cfg, h.Pass, false)
+		err := com.RunDBUpdate(false)
 		ch <- result{err}
 	}()
 	select {
@@ -327,7 +311,7 @@ func (h *UpdateHandler) runUpdateJob(id uint64) {
 }
 
 func (h *UpdateHandler) runThumbgen(ctx context.Context) error {
-	dsn := filepath.Join(h.Cfg.Paths.DataDir, "image_metadata.db") + "?_busy_timeout=5000&_journal_mode=WAL&_cache_size=10000"
+	dsn := filepath.Join(config.GetString("paths.data"), "image_metadata.db") + "?_busy_timeout=5000&_journal_mode=WAL&_cache_size=10000"
 	db, err := sql.Open("sqlite3", dsn)
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
@@ -341,7 +325,7 @@ func (h *UpdateHandler) runThumbgen(ctx context.Context) error {
 	type result struct{ err error }
 	ch := make(chan result, 1)
 	go func() {
-		err := com.RunThumbGen(h.Cfg, db)
+		err := com.RunThumbGen(db)
 		ch <- result{err}
 	}()
 	select {
@@ -353,7 +337,7 @@ func (h *UpdateHandler) runThumbgen(ctx context.Context) error {
 }
 
 func (h *RepopulateHandler) runThumbgen(ctx context.Context) error {
-	dsn := filepath.Join(h.Cfg.Paths.DataDir, "image_metadata.db") + "?_busy_timeout=5000&_journal_mode=WAL&_cache_size=10000"
+	dsn := filepath.Join(config.GetString("paths.data"), "image_metadata.db") + "?_busy_timeout=5000&_journal_mode=WAL&_cache_size=10000"
 	db, err := sql.Open("sqlite3", dsn)
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
@@ -367,7 +351,7 @@ func (h *RepopulateHandler) runThumbgen(ctx context.Context) error {
 	type result struct{ err error }
 	ch := make(chan result, 1)
 	go func() {
-		err := com.RunThumbGen(h.Cfg, db)
+		err := com.RunThumbGen(db)
 		ch <- result{err}
 	}()
 	select {
@@ -382,7 +366,7 @@ func (h *RepopulateHandler) runDBRepopulate(ctx context.Context) error {
 	type result struct{ err error }
 	ch := make(chan result, 1)
 	go func() {
-		err := com.RunDBUpdate(h.Cfg, h.Pass, true)
+		err := com.RunDBUpdate(true)
 		ch <- result{err}
 	}()
 	select {

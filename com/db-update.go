@@ -50,9 +50,33 @@ type Dataset struct {
 	Timestamp float64 `json:"timestamp"`
 }
 
+type ImageDirConfig struct {
+	IsFilled    bool   `toml:"isFilled"`
+	VPix        int    `toml:"vPix"`
+	Sensor      string `toml:"sensor"`
+	IsCorrected bool   `toml:"corrected"`
+	Composite   string `toml:"composite"`
+}
+
+type PassTypeConfig struct {
+	DatasetFile string
+	RawDataFile string
+	Downlink    string
+	ImageDirs   map[string]ImageDirConfig
+}
+
+type PassesConfig struct {
+	FolderIncludes map[string]string `toml:"folderincludes"`
+}
+
+type PassConfig struct {
+	Composites map[string]string         `toml:"composites"`
+	PassTypes  map[string]PassTypeConfig `toml:"passTypes"`
+	Passes     PassesConfig              `toml:"passes"`
+}
+
 type updCtx struct {
-	cfg           *config.AppConfig
-	passCfg       *config.PassConfig
+	passCfg       *PassConfig
 	db            *sql.DB
 	liveOutputDir string
 }
@@ -64,7 +88,7 @@ type existingPassData struct {
 
 // load PassConfig from prefs SQLite
 
-func loadPassConfigFromPrefs(ctx context.Context, prefsDBPath string) (*config.PassConfig, error) {
+func loadPassConfigFromPrefs(ctx context.Context, prefsDBPath string) (*PassConfig, error) {
 	if strings.TrimSpace(prefsDBPath) == "" {
 		return nil, errors.New("prefs db path empty")
 	}
@@ -82,10 +106,10 @@ func loadPassConfigFromPrefs(ctx context.Context, prefsDBPath string) (*config.P
 		return nil, fmt.Errorf("prefs pragma: %w", err)
 	}
 
-	out := &config.PassConfig{
+	out := &PassConfig{
 		Composites: map[string]string{},
-		PassTypes:  map[string]config.PassTypeConfig{},
-		Passes:     config.PassesConfig{FolderIncludes: map[string]string{}},
+		PassTypes:  map[string]PassTypeConfig{},
+		Passes:     PassesConfig{FolderIncludes: map[string]string{}},
 	}
 
 	// composites
@@ -156,10 +180,10 @@ func loadPassConfigFromPrefs(ctx context.Context, prefsDBPath string) (*config.P
 
 	// image_dir_rules per pass_type
 	for _, pr := range passRows {
-		pt := config.PassTypeConfig{
+		pt := PassTypeConfig{
 			DatasetFile: strings.TrimSpace(pr.datasetFile.String),
 			Downlink:    strings.TrimSpace(pr.downlink.String),
-			ImageDirs:   map[string]config.ImageDirConfig{},
+			ImageDirs:   map[string]ImageDirConfig{},
 		}
 		// If config.PassTypeConfig has RawDataFile, populate it:
 		pt.RawDataFile = strings.TrimSpace(pr.rawDataFile.String) // empty when column missing
@@ -206,7 +230,7 @@ func loadPassConfigFromPrefs(ctx context.Context, prefsDBPath string) (*config.P
 				}
 			}
 
-			pt.ImageDirs[dir] = config.ImageDirConfig{
+			pt.ImageDirs[dir] = ImageDirConfig{
 				IsFilled:    isFilled != 0,
 				VPix:        vPix,
 				Sensor:      sensor,
@@ -429,7 +453,7 @@ func needsRescanFromMTime(latest time.Time, now time.Time) uint8 {
 // main logic
 
 // Returns: images, parsed dataset, datasetAbsPath (for reading only), downlink, rawDataRelPath (from config)
-func (c *updCtx) processPassType(passFolder string, passType config.PassTypeConfig) ([]Image, *Dataset, string, string, string, error) {
+func (c *updCtx) processPassType(passFolder string, passType PassTypeConfig) ([]Image, *Dataset, string, string, string, error) {
 	// DATASET: used for reading satellite/timestamp only; not stored in DB
 	var dataset Dataset
 	datasetAbsPath := ""
@@ -640,9 +664,6 @@ func (c *updCtx) processPassOptimized(passFolder string, images []Image, dataset
 }
 
 func (c *updCtx) processPasses(mode int8) error {
-	if c.cfg == nil {
-		return fmt.Errorf("processPasses: AppConfig is nil")
-	}
 	if c.passCfg == nil {
 		return fmt.Errorf("processPasses: PassConfig is nil")
 	}
@@ -761,19 +782,19 @@ func (c *updCtx) processPasses(mode int8) error {
 }
 
 // entrypoint
-func RunDBUpdate(cfg *config.AppConfig, passCfg *config.PassConfig, repopulate bool) error {
-	if cfg == nil {
-		return fmt.Errorf("RunDBUpdate: cfg is nil")
-	}
-	if strings.TrimSpace(cfg.Paths.DataDir) == "" {
+func RunDBUpdate(repopulate bool) error {
+	dataDir := config.GetString("paths.data")
+	liveDir := config.GetString("paths.live_output")
+	var passCfg *PassConfig
+	if strings.TrimSpace(dataDir) == "" {
 		return fmt.Errorf("RunDBUpdate: database.path missing")
 	}
-	if strings.TrimSpace(cfg.Paths.LiveOutputDir) == "" {
+	if strings.TrimSpace(liveDir) == "" {
 		return fmt.Errorf("RunDBUpdate: paths.live_output_dir missing")
 	}
 
 	ctx := context.Background()
-	prefsDBPath := filepath.Join(strings.TrimSpace(cfg.Paths.DataDir), "local_data.db")
+	prefsDBPath := filepath.Join(strings.TrimSpace(dataDir), "local_data.db")
 	if loaded, err := loadPassConfigFromPrefs(ctx, prefsDBPath); err == nil {
 		passCfg = loaded
 		fmt.Println("PassConfig loaded")
@@ -784,17 +805,16 @@ func RunDBUpdate(cfg *config.AppConfig, passCfg *config.PassConfig, repopulate b
 		return fmt.Errorf("RunDBUpdate: no pass config available")
 	}
 
-	db, err := sql.Open("sqlite3", filepath.Join(cfg.Paths.DataDir, "image_metadata.db"))
+	db, err := sql.Open("sqlite3", filepath.Join(dataDir, "image_metadata.db"))
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
 	}
 	defer db.Close()
 
 	uctx := &updCtx{
-		cfg:           cfg,
 		passCfg:       passCfg,
 		db:            db,
-		liveOutputDir: cfg.Paths.LiveOutputDir,
+		liveOutputDir: liveDir,
 	}
 
 	if err := uctx.initializeDatabase(); err != nil {

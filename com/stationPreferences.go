@@ -95,11 +95,8 @@ type UserRow struct {
 
 // ---------- Open / Close / Migrate ----------
 
-func OpenLocalData(cfg *config.AppConfig) error {
-	if cfg == nil {
-		return errors.New("nil config")
-	}
-	dataDir := strings.TrimSpace(cfg.Paths.DataDir)
+func OpenLocalData() error {
+	dataDir := strings.TrimSpace(config.GetString("paths.data"))
 	if dataDir == "" {
 		dataDir = "data"
 	}
@@ -1286,7 +1283,7 @@ func DeleteFolderInclude(db *sql.DB, ctx context.Context, prefix string) error {
 	return err
 }
 
-func SeedFromPassConfig(db *sql.DB, ctx context.Context, passCfg *config.PassConfig) error {
+func SeedFromPassConfig(db *sql.DB, ctx context.Context, passCfg *PassConfig) error {
 	if passCfg == nil {
 		return nil
 	}
