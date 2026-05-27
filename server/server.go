@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
-	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
@@ -25,7 +24,6 @@ type Config struct {
 	LocalStore   *sql.DB
 	SessionStore *sessions.CookieStore
 	TempAdmin    *com.EphemeralAdmin
-	StartTime    time.Time
 	EmbeddedFS   embed.FS
 }
 

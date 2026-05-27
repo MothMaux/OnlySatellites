@@ -32,23 +32,22 @@ type Application struct {
 	localStore   *sql.DB
 	sessionStore *sessions.CookieStore
 	tempAdmin    *com.EphemeralAdmin
-	startTime    time.Time
 }
 
 // NewApplication creates and initializes a new Application instance
 func NewApplication() (*Application, error) {
 	app := &Application{
-		startTime: time.Now(),
+		passConfig: &config.PassConfig{
+			Composites: map[string]string{},
+			PassTypes:  map[string]config.PassTypeConfig{},
+			Passes:     config.PassesConfig{FolderIncludes: map[string]string{}},
+		},
 	}
 
-	if err := app.loadConfig(); err != nil {
+	config.Set("server.lastStartTime", time.Now().Format(time.RFC3339))
+
+	if err := config.Load("config.toml"); err != nil {
 		return nil, fmt.Errorf("failed to load config: %w", err)
-	}
-
-	app.passConfig = &config.PassConfig{
-		Composites: map[string]string{},
-		PassTypes:  map[string]config.PassTypeConfig{},
-		Passes:     config.PassesConfig{FolderIncludes: map[string]string{}},
 	}
 
 	if err := app.initializeStores(); err != nil {
@@ -85,11 +84,6 @@ func (app *Application) Close() error {
 	}
 
 	return nil
-}
-
-func (app *Application) loadConfig() error {
-	err := config.Load("config.toml")
-	return err
 }
 
 func (app *Application) initializeStores() error {
@@ -229,7 +223,6 @@ func main() {
 		LocalStore:   app.localStore,
 		SessionStore: app.sessionStore,
 		TempAdmin:    app.tempAdmin,
-		StartTime:    app.startTime,
 		EmbeddedFS:   embeddedFiles,
 	})
 

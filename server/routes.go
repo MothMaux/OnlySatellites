@@ -60,7 +60,11 @@ func (s *Server) setupMiscRoutes(r *mux.Router) {
 		Timeout: 3 * time.Second,
 	}
 	r.Handle("/local/api/hardware", s.requireAuth(3, hw)).Methods("GET")
-	info := handlers.NewInfoHandler(s.cfg.StartTime)
+	time, err := time.Parse(time.RFC3339, config.GetString("server.lastStartTime"))
+	if err != nil {
+		log.Printf("Error parsing last start time: %v", err)
+	}
+	info := handlers.NewInfoHandler(time)
 	r.Handle("/local/api/info", info).Methods("GET")
 
 	// CSS and admin routes
@@ -136,9 +140,13 @@ func (s *Server) setupMiscRoutes(r *mux.Router) {
 // handleStats returns server statistics
 func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	timee, err := time.Parse(time.RFC3339, config.GetString("server.lastStartTime"))
+	if err != nil {
+		log.Printf("Error parsing last start time: %v", err)
+	}
 	stats := map[string]any{
-		"startTime": s.cfg.StartTime.Unix(),
-		"uptime":    time.Since(s.cfg.StartTime).Seconds(),
+		"startTime": time.Unix(timee.Unix(), 0),
+		"uptime":    time.Since(timee).Seconds(),
 	}
 
 	if err := json.NewEncoder(w).Encode(stats); err != nil {
