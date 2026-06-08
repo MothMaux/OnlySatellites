@@ -239,8 +239,23 @@ func main() {
 		ReadHeaderTimeout: 10 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
-	log.Printf("Server running at http://localhost%s", port)
 	if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
+	}
+	log.Printf("Server running at http://localhost%s", port)
+	if config.GetBool("database.webhook_enabled") {
+		wrouter := srv.CreateWebhook()
+		webhookServer := &http.Server{
+			Addr:              ":1515",
+			Handler:           wrouter,
+			ReadTimeout:       time.Duration(config.GetInt("server.read_timeout")) * time.Second,
+			WriteTimeout:      time.Duration(config.GetInt("server.write_timeout")) * time.Second,
+			ReadHeaderTimeout: 10 * time.Second,
+			IdleTimeout:       60 * time.Second,
+		}
+		if err := webhookServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatal(err)
+		}
+		log.Printf("Webhook server running at http://localhost%s", ":1515")
 	}
 }

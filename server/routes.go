@@ -40,6 +40,18 @@ func (s *Server) setupUpdateRoutes(r *mux.Router) {
 	r.Handle("/api/repopulate", s.requireAuth(3, rpl)).Methods("POST")
 }
 
+func (s *Server) CreateWebhook() *mux.Router {
+	r := mux.NewRouter()
+
+	upd := &handlers.UpdateHandler{
+		Cooldown: time.Second * 10,
+	}
+
+	r.Handle("/webhook", upd).Methods("POST")
+
+	return r
+}
+
 func (s *Server) setupMiscRoutes(r *mux.Router) {
 	htmlFS := s.mustSubHTMLFS()
 	partialFS := s.mustSubPFS()
