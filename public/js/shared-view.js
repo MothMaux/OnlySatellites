@@ -20,9 +20,8 @@ function attachThumbnail404Bypass(imgEl, originalSrc) {
 function formatTimestamp(ts) {
   if (!ts) return 'Unknown';
   const date = new Date(ts * 1000);
-  return document.getElementById('useUTC')?.checked
-    ? date.toUTCString()
-    : date.toLocaleString();
+  const useUTC = document.getElementById('useUTC')?.checked ?? true;
+  return useUTC ? date.toUTCString() : date.toLocaleString();
 }
 
 function getThumbnailPath(relPath) {
