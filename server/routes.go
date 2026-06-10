@@ -72,11 +72,7 @@ func (s *Server) setupMiscRoutes(r *mux.Router) {
 		Timeout: 3 * time.Second,
 	}
 	r.Handle("/local/api/hardware", s.requireAuth(3, hw)).Methods("GET")
-	time, err := time.Parse(time.RFC3339, config.GetString("server.lastStartTime"))
-	if err != nil {
-		log.Printf("Error parsing last start time: %v", err)
-	}
-	info := handlers.NewInfoHandler(time)
+	info := handlers.NewInfoHandler(config.GetInt("server.lastStartTime"))
 	r.Handle("/local/api/info", info).Methods("GET")
 
 	// CSS and admin routes

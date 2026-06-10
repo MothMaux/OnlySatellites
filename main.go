@@ -176,7 +176,6 @@ func (app *Application) initializeAuthDB() error {
 
 // Main function
 func main() {
-	log.Print("starting")
 	cmdFlag := flag.String("c", "", "command to run (e.g., 'update')")
 	flag.Parse()
 

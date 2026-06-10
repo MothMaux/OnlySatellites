@@ -33,8 +33,8 @@ type InfoHandler struct {
 }
 
 // construct and primes the process handle.
-func NewInfoHandler(appStart time.Time) *InfoHandler {
-	h := &InfoHandler{AppStart: appStart}
+func NewInfoHandler(appStart int) *InfoHandler {
+	h := &InfoHandler{AppStart: time.Unix(int64(appStart), 0)}
 	_ = h.initProc()
 	return h
 }
