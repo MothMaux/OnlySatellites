@@ -54,9 +54,9 @@ func (s *Server) CreateRouter() *mux.Router {
 }
 
 func (s *Server) setupStaticRoutes(r *mux.Router) {
-	r.PathPrefix("/css/").Handler(http.StripPrefix("/css/", http.FileServer(s.mustSubFS("public/css"))))
-	r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", http.FileServer(s.mustSubFS("public/js"))))
-	r.PathPrefix("/img/").Handler(http.StripPrefix("/img/", http.FileServer(s.mustSubFS("public/image"))))
+	r.PathPrefix("/css/").Handler(http.StripPrefix("/css/", http.FileServer(s.mustSubFS("web/css"))))
+	r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", http.FileServer(s.mustSubFS("web/js"))))
+	r.PathPrefix("/img/").Handler(http.StripPrefix("/img/", http.FileServer(s.mustSubFS("web/image"))))
 }
 
 func (s *Server) setupPublicRoutes(r *mux.Router) {
@@ -77,7 +77,7 @@ func (s *Server) setupGalleryRoutes(r *mux.Router) {
 	gapi := &handlers.GalleryAPI{
 		DB:            s.cfg.DB,
 		LiveOutputDir: config.GetString("paths.live_output"),
-		UserContent:   filepath.Join("public", "userContent"),
+		UserContent:   filepath.Join("web", "userContent"),
 		LocalStore:    s.cfg.LocalStore,
 	}
 
@@ -114,7 +114,7 @@ func (s *Server) mustSubFS(dir string) http.FileSystem {
 }
 
 func (s *Server) mustSubHTMLFS() fs.FS {
-	htmlFS, err := fs.Sub(s.cfg.EmbeddedFS, "public/html")
+	htmlFS, err := fs.Sub(s.cfg.EmbeddedFS, "web/html")
 	if err != nil {
 		log.Fatal("Failed to create HTML filesystem:", err)
 	}
@@ -122,7 +122,7 @@ func (s *Server) mustSubHTMLFS() fs.FS {
 }
 
 func (s *Server) mustSubPFS() fs.FS {
-	htmlFS, err := fs.Sub(s.cfg.EmbeddedFS, "public/html/partials")
+	htmlFS, err := fs.Sub(s.cfg.EmbeddedFS, "web/html/partials")
 	if err != nil {
 		log.Fatal("Failed to create HTML filesystem:", err)
 	}
