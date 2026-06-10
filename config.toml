@@ -24,3 +24,6 @@ quality = 50
 
 [stationproxy]
 enabled = false
+
+[database]
+webhook_enabled = false

@@ -14,23 +14,15 @@ if [ $GOVERSION >= go1.25 ]; then
 fi
 
 if [ $1 = "release" ]; then
-    export CGO_CFLAGS="-D_LARGEFILE64_SOURCE"
-    export CGO_LDFLAGS="-lstdc++"
     echo "Building in release mode with large file support..."
-fi
-if [ $1 = "debug" ]; then
-    echo "Building in debug mode... (this does nothing yet)"
 fi
 if [ $1 = "experimental" ] && [ $GREEN = true ]; then
     export GOEXPERIMENT=greenteagc
     echo "greenteagc enabled for this build"
 fi
 
-#export GOEXPERIMENT=greenteagc #uncomment to use golang experimental garbage collector. Requires golang 1.25 or higher.
-
 go run com/comptime/minify.go
-
-echo "Web files minified successfully!"
+echo "Temp files created, building application. This may take a moment..."
 go build -o OnlySats main.go
 if [ $? -ne 0 ]; then
     echo "Failed to build main application"
