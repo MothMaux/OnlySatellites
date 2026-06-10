@@ -9,6 +9,7 @@ max_open_conns = 1
 max_idle_conns = 1
 conn_max_lifetime = 0
 cache_size = 10000
+webhook_enabled = false
 
 [paths]
 data = 'data'
@@ -24,6 +25,3 @@ quality = 50
 
 [stationproxy]
 enabled = false
-
-[database]
-webhook_enabled = false

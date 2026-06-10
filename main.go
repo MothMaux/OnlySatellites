@@ -44,8 +44,6 @@ func NewApplication() (*Application, error) {
 		},
 	}
 
-	config.Set("server.lastStartTime", time.Now().Format(time.RFC3339))
-
 	if err := config.Load("config.toml"); err != nil {
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
@@ -53,6 +51,7 @@ func NewApplication() (*Application, error) {
 	if err := app.initializeStores(); err != nil {
 		return nil, fmt.Errorf("failed to initialize stores: %w", err)
 	}
+	config.Set("server.lastStartTime", time.Now().Unix)
 
 	return app, nil
 }
@@ -177,6 +176,7 @@ func (app *Application) initializeAuthDB() error {
 
 // Main function
 func main() {
+	log.Print("starting")
 	cmdFlag := flag.String("c", "", "command to run (e.g., 'update')")
 	flag.Parse()
 
@@ -184,6 +184,8 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to initialize application:", err)
 	}
+
+	log.Print("app")
 	defer func() {
 		if err := app.Close(); err != nil {
 			log.Printf("Error during shutdown: %v", err)
