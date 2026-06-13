@@ -184,7 +184,6 @@ func main() {
 		log.Fatal("Failed to initialize application:", err)
 	}
 
-	log.Print("app")
 	defer func() {
 		if err := app.Close(); err != nil {
 			log.Printf("Error during shutdown: %v", err)

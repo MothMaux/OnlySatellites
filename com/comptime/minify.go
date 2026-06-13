@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -30,17 +31,21 @@ func main() {
 	os.Mkdir("web", 0755)
 	os.Mkdir("web/js", 0755)
 	os.Mkdir("web/html", 0755)
-	os.Mkdir("web/html/partials", 0755)
+	//os.Mkdir("web/html/partials", 0755)
 	os.Mkdir("web/css", 0755)
 
+	os.CopyFS("web/html/partials", os.DirFS("public/html/partials"))
 	os.CopyFS("web/image", os.DirFS("public/image"))
 
 	//HTML
 	process(m, Asset{In: "public/html/index.html", Out: "web/html/index.html", Mime: thtml})
-	process(m, Asset{In: "public/html/about_editor.html", Out: "web/html/about_editor.html", Mime: thtml})
+	process(m, Asset{In: "public/html/about.html", Out: "web/html/about.html", Mime: thtml})
+	//process(m, Asset{In: "public/html/about_editor.html", Out: "web/html/about_editor.html", Mime: thtml})
+	noprocess("public/html/about_editor.html", "web/html/about_editor.html")
 	process(m, Asset{In: "public/html/admin-center.html", Out: "web/html/admin-center.html", Mime: thtml})
 	process(m, Asset{In: "public/html/data.html", Out: "web/html/data.html", Mime: thtml})
-	process(m, Asset{In: "public/html/gallery.html", Out: "web/html/gallery.html", Mime: thtml})
+	//process(m, Asset{In: "public/html/gallery.html", Out: "web/html/gallery.html", Mime: thtml})
+	noprocess("public/html/gallery.html", "web/html/gallery.html")
 	process(m, Asset{In: "public/html/local_about.html", Out: "web/html/local_about.html", Mime: thtml})
 	process(m, Asset{In: "public/html/local.html", Out: "web/html/local.html", Mime: thtml})
 	process(m, Asset{In: "public/html/login.html", Out: "web/html/login.html", Mime: thtml})
@@ -50,14 +55,22 @@ func main() {
 	process(m, Asset{In: "public/html/stats.html", Out: "web/html/stats.html", Mime: thtml})
 	process(m, Asset{In: "public/html/template_editor.html", Out: "web/html/template_editor.html", Mime: thtml})
 	//Partials
-	process(m, Asset{In: "public/html/partials/admin-gen.html", Out: "web/html/partials/admin-gen.html", Mime: thtml})
+	/**process(m, Asset{In: "public/html/partials/admin-gen.html", Out: "web/html/partials/admin-gen.html", Mime: thtml})
 	process(m, Asset{In: "public/html/partials/admin-img.html", Out: "web/html/partials/admin-img.html", Mime: thtml})
 	process(m, Asset{In: "public/html/partials/admin-net.html", Out: "web/html/partials/admin-net.html", Mime: thtml})
 	process(m, Asset{In: "public/html/partials/admin-pss.html", Out: "web/html/partials/admin-pss.html", Mime: thtml})
 	process(m, Asset{In: "public/html/partials/admin-sat.html", Out: "web/html/partials/admin-sat.html", Mime: thtml})
 	process(m, Asset{In: "public/html/partials/admin-stg.html", Out: "web/html/partials/admin-stg.html", Mime: thtml})
 	process(m, Asset{In: "public/html/partials/advanced-view.html", Out: "web/html/partials/advanced-view.html", Mime: thtml})
-	process(m, Asset{In: "public/html/partials/simplified-view.html", Out: "web/html/partials/simplified-view.html", Mime: thtml})
+	process(m, Asset{In: "public/html/partials/simplified-view.html", Out: "web/html/partials/simplified-view.html", Mime: thtml}) */
+	noprocess("public/html/partials/admin-gen.html", "web/html/partials/admin-gen.html")
+	noprocess("public/html/partials/admin-img.html", "web/html/partials/admin-img.html")
+	noprocess("public/html/partials/admin-net.html", "web/html/partials/admin-net.html")
+	noprocess("public/html/partials/admin-pss.html", "web/html/partials/admin-pss.html")
+	noprocess("public/html/partials/admin-sat.html", "web/html/partials/admin-sat.html")
+	noprocess("public/html/partials/admin-stg.html", "web/html/partials/admin-stg.html")
+	noprocess("public/html/partials/advanced-view.html", "web/html/partials/advanced-view.html")
+	noprocess("public/html/partials/simplified-view.html", "web/html/partials/simplified-view.html")
 	//JS
 	process(m, Asset{In: "public/js/advanced-view.js", Out: "web/js/advanced-view.js", Mime: tjs})
 	process(m, Asset{In: "public/js/data.js", Out: "web/js/data.js", Mime: tjs})
@@ -102,4 +115,29 @@ func process(m *minify.M, a Asset) error {
 	}
 
 	return m.Minify(a.Mime, out, in)
+}
+
+func noprocess(src, dst string) (int64, error) {
+	sourceFileStat, err := os.Stat(src)
+	if err != nil {
+		return 0, err
+	}
+
+	if !sourceFileStat.Mode().IsRegular() {
+		return 0, fmt.Errorf("%s is not a regular file", src)
+	}
+
+	source, err := os.Open(src)
+	if err != nil {
+		return 0, err
+	}
+	defer source.Close()
+
+	destination, err := os.Create(dst)
+	if err != nil {
+		return 0, err
+	}
+	defer destination.Close()
+	nBytes, err := io.Copy(destination, source)
+	return nBytes, err
 }
