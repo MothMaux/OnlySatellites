@@ -41,6 +41,7 @@ type SettingsFlat map[string]any
 var (
 	treeStore atomic.Value // SettingsTree
 	flatStore atomic.Value // SettingsFlat
+	cfgPath   string       // config file location
 	mu        sync.Mutex
 )
 
@@ -71,9 +72,10 @@ func Load(path string) error {
 		return fmt.Errorf("parse config: %w", err)
 	}
 
+	cfgPath = path
+
 	tree := SettingsTree(raw)
 	flat := make(SettingsFlat)
-
 	flatten("", tree, flat)
 
 	treeStore.Store(tree)
@@ -181,6 +183,14 @@ func setInTree(tree map[string]any, key string, value any) error {
 	return nil
 }
 
+func saveLocked(tree SettingsTree) error {
+	data, err := toml.Marshal(tree)
+	if err != nil {
+		return fmt.Errorf("marshal config: %w", err)
+	}
+	return os.WriteFile(cfgPath, data, 0644)
+}
+
 func Set(key string, value any) error {
 	mu.Lock()
 	defer mu.Unlock()
@@ -197,7 +207,7 @@ func Set(key string, value any) error {
 	treeStore.Store(tree)
 	flatStore.Store(newFlat)
 
-	return nil
+	return saveLocked(tree)
 }
 
 // Defaults & Loaders

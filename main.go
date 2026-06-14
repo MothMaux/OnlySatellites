@@ -51,7 +51,7 @@ func NewApplication() (*Application, error) {
 	if err := app.initializeStores(); err != nil {
 		return nil, fmt.Errorf("failed to initialize stores: %w", err)
 	}
-	config.Set("server.lastStartTime", time.Now().Unix)
+	config.Set("server.lastStartTime", time.Now().Unix())
 
 	return app, nil
 }
