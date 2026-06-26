@@ -16,6 +16,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 
 	com "OnlySats/com"
+	"OnlySats/com/metrics"
 	"OnlySats/com/shared"
 	"OnlySats/config"
 	"OnlySats/server"
@@ -178,6 +179,8 @@ func (app *Application) initializeAuthDB() error {
 func main() {
 	cmdFlag := flag.String("c", "", "command to run (e.g., 'update')")
 	flag.Parse()
+
+	metrics.StartDebugServer()
 
 	app, err := NewApplication()
 	if err != nil {
