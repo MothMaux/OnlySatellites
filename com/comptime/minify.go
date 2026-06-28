@@ -43,6 +43,7 @@ func main() {
 	//process(m, Asset{In: "public/html/about_editor.html", Out: "web/html/about_editor.html", Mime: thtml})
 	noprocess("public/html/about_editor.html", "web/html/about_editor.html")
 	process(m, Asset{In: "public/html/admin-center.html", Out: "web/html/admin-center.html", Mime: thtml})
+	process(m, Asset{In: "public/html/baseband.html", Out: "web/html/baseband.html", Mime: thtml})
 	process(m, Asset{In: "public/html/data.html", Out: "web/html/data.html", Mime: thtml})
 	//process(m, Asset{In: "public/html/gallery.html", Out: "web/html/gallery.html", Mime: thtml})
 	noprocess("public/html/gallery.html", "web/html/gallery.html")

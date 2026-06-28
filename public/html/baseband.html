@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Baseband Gallery</title>
+  <link rel="icon" href="/img/OnlySats_Logo.svg" type="image/x-icon">
+  <link rel="stylesheet" href="../css/home.css">
+  <link rel="stylesheet" href="../colors.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    #bb-status {
+      padding: 1rem;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    #bb-list {
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 0.5rem;
+      padding: 1rem;
+      align-items: center;
+    }
+
+    .bb-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.6rem 1rem;
+      background: var(--primary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      width: fit-content;
+    }
+
+    .bb-name {
+      font-family: monospace;
+      font-size: 0.95rem;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bb-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .bb-actions button {
+      padding: 0.35rem 0.75rem;
+      font-size: 0.85rem;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-download {
+      background: var(--bg-dark);
+      color: var(--text-muted);
+    }
+
+    .btn-download:hover {
+      opacity: 0.85;
+    }
+
+    .btn-share {
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border) !important;
+    }
+
+    .btn-share:hover {
+      background: var(--bg-light);
+    }
+
+    .btn-share.copied {
+      color: var(--success);
+      border-color: var(--success) !important;
+    }
+
+    .bb-error {
+      color: var(--danger);
+      padding: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="navbar">
+    <a class="active" href="../">Home</a>
+    <a href="../about">This Station</a>
+    <a href="../gallery">Gallery</a>
+    <div class="dropdown">
+      <button class="dropbtn">☰</button>
+      <div class="dropdown-content">
+       <a href="../css/">Log In</a>
+       <a href="../logout">Log Out</a>
+       <a href="../local/admin">Admin</a>
+       <a href="../local/satdump">Satdump</a>
+       <a href="../local/stats">System</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="bb-status">Fetching basebands…</div>
+  <div id="bb-list"></div>
+
+  <script>
+    const API = {
+      list:     '/local/api/basebands',
+      download: '/local/api/downloadbb',
+      share:    '/local/api/shareband',
+      pubDownload: '/api/downloadbb',
+    };
+
+    async function fetchBasebands() {
+      const status = document.getElementById('bb-status');
+      const list   = document.getElementById('bb-list');
+
+      try {
+        const res = await fetch(API.list);
+        if (!res.ok) throw new Error(`Server returned ${res.status}`);
+
+        const files = await res.json();
+
+        if (!files || files.length === 0) {
+          status.textContent = 'No baseband files found.';
+          return;
+        }
+
+        status.textContent = '';
+        list.innerHTML = '';
+
+        files.forEach(filename => {
+          const row = document.createElement('div');
+          row.className = 'bb-row';
+
+          const name = document.createElement('span');
+          name.className = 'bb-name';
+          name.textContent = filename;
+          name.title = filename;
+
+          const actions = document.createElement('div');
+          actions.className = 'bb-actions';
+
+          // Download button
+          const dlBtn = document.createElement('button');
+          dlBtn.className = 'btn-download';
+          dlBtn.textContent = 'Download';
+          dlBtn.addEventListener('click', () => downloadFile(filename));
+
+          // Share button
+          const shareBtn = document.createElement('button');
+          shareBtn.className = 'btn-share';
+          shareBtn.textContent = 'Share';
+          shareBtn.addEventListener('click', () => shareFile(filename, shareBtn));
+
+          actions.appendChild(dlBtn);
+          actions.appendChild(shareBtn);
+          row.appendChild(name);
+          row.appendChild(actions);
+          list.appendChild(row);
+        });
+
+      } catch (err) {
+        status.textContent = '';
+        list.innerHTML = `<div class="bb-error">Failed to load basebands: ${err.message}</div>`;
+      }
+    }
+
+    function downloadFile(filename) {
+      const url = `${API.download}?file=${encodeURIComponent(filename)}`;
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    async function shareFile(filename, btn) {
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Creating link…';
+
+      try {
+        const res = await fetch(`${API.share}?file=${encodeURIComponent(filename)}`);
+        if (!res.ok) throw new Error(`Server returned ${res.status}`);
+
+        const { token } = await res.json();
+        const shareUrl = `${location.origin}${API.pubDownload}?token=${token}`;
+
+        await navigator.clipboard.writeText(shareUrl);
+
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+
+        setTimeout(() => {
+          btn.textContent = original;
+          btn.classList.remove('copied');
+          btn.disabled = false;
+        }, 2500);
+
+      } catch (err) {
+        btn.textContent = 'Error';
+        setTimeout(() => {
+          btn.textContent = original;
+          btn.disabled = false;
+        }, 2000);
+        console.error('Share failed:', err);
+      }
+    }
+
+    fetchBasebands();
+  </script>
+</body>
+</html>

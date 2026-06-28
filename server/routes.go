@@ -78,6 +78,7 @@ func (s *Server) setupMiscRoutes(r *mux.Router) {
 	// CSS and admin routes
 	liveOut := config.GetString("paths.live_output")
 	r.Handle("/colors.css", &handlers.ColorsCSSHandler{Store: s.cfg.LocalStore})
+	r.Handle("/local/basebands", s.requireAuth(3, s.serveEmbeddedHTML("baseband.html", htmlFS))).Methods("GET")
 	r.Handle("/local/stats", s.requireAuth(3, s.serveEmbeddedHTML("stats.html", htmlFS))).Methods("GET")
 	r.Handle("/local/admin", s.requireAuth(1, s.serveEmbeddedHTML("admin-center.html", htmlFS))).Methods("GET")
 	r.Handle("/local/admin/general", s.requireAuth(1, s.serveEmbeddedHTML("admin-gen.html", partialFS))).Methods("GET")
@@ -88,6 +89,12 @@ func (s *Server) setupMiscRoutes(r *mux.Router) {
 	r.Handle("/local/admin/images", s.requireAuth(1, s.serveEmbeddedHTML("admin-img.html", partialFS))).Methods("GET")
 	r.Handle("/local/api/disk-stats", s.requireAuth(3, http.HandlerFunc(handlers.ServeDiskStats(liveOut)))).Methods("GET")
 	r.Handle("/local/api/rotate-pass", s.requireAuth(3, http.HandlerFunc(handlers.ServeRotatePass180(liveOut, config.GetString("paths.thumbnails"))))).Methods("POST")
+
+	basebandHandler := &handlers.BasebandHandler{}
+	r.Handle("/local/api/basebands", s.requireAuth(3, http.HandlerFunc(basebandHandler.GetBasebands))).Methods("GET")
+	r.Handle("/local/api/shareband", s.requireAuth(3, http.HandlerFunc(basebandHandler.ShareBaseband))).Methods("GET")
+	r.Handle("/local/api/downloadbb", s.requireAuth(3, http.HandlerFunc(basebandHandler.DownloadBaseband))).Methods("GET")
+	r.Handle("/api/downloadbb", http.HandlerFunc(basebandHandler.DownloadPubBaseband)).Methods("GET") //public
 
 	// API endpoints
 	r.Handle("/api/stats", s.requireAuth(3, http.HandlerFunc(s.handleStats))).Methods("GET")
